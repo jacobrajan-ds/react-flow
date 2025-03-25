@@ -7,7 +7,6 @@ import {
   addEdge,
   Background,
   Controls,
-  MiniMap,
   Panel,
   useReactFlow,
   NodeTypes,
@@ -17,14 +16,9 @@ import {
   applyNodeChanges,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { useRouter, useSearchParams } from "next/navigation";
 
-import {
-  CustomNode,
-  CustomEdge,
-  HttpInData,
-  HttpResponseData,
-  FunctionData,
-} from "./types/flow";
+import { CustomNode, CustomEdge, NodeTypeDefinition } from "./types/flow";
 import FunctionNode from "@/components/nodes/FunctionNode";
 import HttpResponseNode from "@/components/nodes/HttpResponseNode";
 import HttpInNode from "@/components/nodes/HttpInNode";
@@ -35,112 +29,112 @@ import NodeConfiguration from "@/components/configurations/NodeConfiguration";
 import DebugPanel from "@/components/DebugPanel";
 import AddNodeButton from "@/components/AddNodeButton";
 
-const initialNodes: CustomNode[] = [
-  {
-    id: "http-in-1",
-    type: "httpIn",
-    position: { x: 100, y: 100 },
-    data: {
-      label: "API Endpoint",
-      method: "POST",
-      url: "/api/process-data",
-    },
-  },
-  {
-    id: "function-1",
-    type: "function",
-    position: { x: 400, y: 100 },
-    data: {
-      label: "Process Data",
-      functionBody: `
-module.exports = function(msg) {
-  // Get the input data
-  const data = msg.payload;
-  
-  // Process the data
-  let result = {
-    processed: true,
-    timestamp: new Date().toISOString(),
-    originalData: data,
-    uppercase: typeof data.text === 'string' ? data.text.toUpperCase() : null,
-    numberTimesTwo: typeof data.number === 'number' ? data.number * 2 : null,
-    itemCount: Array.isArray(data.items) ? data.items.length : 0
-  };
-  
-  // Update the payload
-  msg.payload = result;
-  
-  return msg;
-}
-      `,
-    },
-  },
-  {
-    id: "http-response-1",
-    type: "httpResponse",
-    position: { x: 700, y: 100 },
-    data: {
-      label: "Send Response",
-      statusCode: 200,
-      contentType: "application/json",
-    },
-  },
-];
-
-const initialEdges: CustomEdge[] = [
-  {
-    id: "edge-1",
-    source: "http-in-1",
-    target: "function-1",
-    type: "animated",
-  },
-  {
-    id: "edge-2",
-    source: "function-1",
-    target: "http-response-1",
-    type: "animated",
-  },
-];
-
-const nodeTypes: NodeTypes = {
-  httpIn: HttpInNode,
-  httpResponse: HttpResponseNode,
-  function: FunctionNode,
-};
-
 function Flow() {
-  const [nodes, setNodes] = useState<CustomNode[]>(initialNodes);
-  const [edges, setEdges] = useState<CustomEdge[]>(initialEdges);
+  const [nodes, setNodes] = useState<CustomNode[]>([]);
+  const [edges, setEdges] = useState<CustomEdge[]>([]);
   const [selectedNode, setSelectedNode] = useState<CustomNode | null>(null);
-  const [flowId] = useState(`flow-${Date.now()}`);
+  const [flowId, setFlowId] = useState<string>("");
   const [logs, setLogs] = useState<string[]>([]);
   const [isDebugVisible, setIsDebugVisible] = useState(false);
   const [executionResult, setExecutionResult] = useState<any>(null);
+  const [nodeTypes, setNodeTypes] = useState<NodeTypes>({});
+  const [availableNodeTypes, setAvailableNodeTypes] = useState<
+    NodeTypeDefinition[]
+  >([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const reactFlowInstance = useReactFlow();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const workflowIdParam = searchParams.get("id");
 
   useEffect(() => {
-    const saveInitialFlow = async () => {
-      try {
-        await fetch("/api/save-flow", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            flowId,
-            nodes,
-            edges,
-          }),
-        });
-        console.log("Initial flow saved");
-      } catch (error) {
-        console.error("Error saving initial flow:", error);
-      }
+    const defaultNodeTypes: NodeTypes = {
+      httpIn: HttpInNode,
+      httpResponse: HttpResponseNode,
+      function: FunctionNode,
     };
+    setNodeTypes(defaultNodeTypes);
+  }, []);
 
-    saveInitialFlow();
-  }, [flowId]);
+  useEffect(() => {
+    async function fetchNodeTypes() {
+      try {
+        const response = await fetch("/api/node-types");
+        if (!response.ok) throw new Error("Failed to fetch node types");
+        const data = await response.json();
+        setAvailableNodeTypes(data);
+      } catch (error) {
+        console.error("Error loading node types:", error);
+      }
+    }
+
+    fetchNodeTypes();
+  }, []);
+
+  useEffect(() => {
+    async function loadWorkflow(id: string) {
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/workflows/${id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setFlowId(id);
+          setNodes(data.nodes || []);
+          setEdges(data.edges || []);
+        } else if (response.status === 404) {
+          // Workflow doesn't exist yet, initialize it
+          console.log(`Workflow ${id} not found, initializing new workflow`);
+          setFlowId(id);
+          setNodes([]);
+          setEdges([]);
+          saveNewWorkflow(id);
+        } else {
+          console.error("Error loading workflow:", await response.text());
+        }
+      } catch (error) {
+        console.error("Error loading workflow:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (workflowIdParam) {
+      loadWorkflow(workflowIdParam);
+    } else {
+      const newFlowId = `flow-${Date.now()}`;
+      setFlowId(newFlowId);
+      router.push(`?id=${newFlowId}`);
+      setNodes([]);
+      setEdges([]);
+      saveNewWorkflow(newFlowId);
+      setIsLoading(false);
+    }
+  }, [workflowIdParam, router]);
+
+  const saveNewWorkflow = async (id: string) => {
+    try {
+      const response = await fetch("/api/workflows", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id,
+          nodes: [],
+          edges: [],
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Failed to initialize workflow:", await response.text());
+      } else {
+        console.log("New workflow initialized:", id);
+      }
+    } catch (error) {
+      console.error("Error initializing workflow:", error);
+    }
+  };
 
   const onConnect: OnConnect = useCallback((params: Connection) => {
     setEdges((eds) => addEdge(params, eds));
@@ -160,7 +154,7 @@ function Flow() {
   }, []);
 
   const onDrop = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
+    async (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       const nodeType = event.dataTransfer.getData("application/reactflow");
       if (!nodeType) return;
@@ -176,45 +170,45 @@ function Flow() {
         y: event.clientY - reactFlowBounds.top,
       });
 
-      const newNode = {
-        id: `${nodeType}-${Date.now()}`,
-        type: nodeType,
-        position,
-        data: getDefaultDataForNodeType(nodeType),
-      };
+      try {
+        const response = await fetch(`/api/node-config/${nodeType}`);
+        if (!response.ok) throw new Error("Failed to fetch node config");
+        const configSchema = await response.json();
 
-      setNodes((nds) => nds.concat(newNode as CustomNode));
+        const defaultData: any = {
+          label: configSchema.defaultLabel || `${nodeType} node`,
+        };
+
+        if (configSchema.fields) {
+          configSchema.fields.forEach((field: any) => {
+            if (field.defaultValue !== undefined) {
+              defaultData[field.id] = field.defaultValue;
+            }
+          });
+        }
+
+        const newNode = {
+          id: `${nodeType}-${Date.now()}`,
+          type: nodeType,
+          position,
+          data: defaultData,
+        };
+
+        setNodes((nds) => nds.concat(newNode as CustomNode));
+      } catch (error) {
+        console.error("Error creating node:", error);
+      }
     },
     [reactFlowInstance]
   );
 
   const onNodesChange = (changes: any) => {
-    // This handler processes node changes including position changes
     setNodes((nds) => applyNodeChanges(changes, nds));
   };
 
-  // Helper function to get default data based on node type
-  const getDefaultDataForNodeType = (type: string) => {
-    switch (type) {
-      case "httpIn":
-        return { label: "HTTP In", method: "GET", url: "/api" } as HttpInData;
-      case "httpResponse":
-        return { label: "HTTP Response", statusCode: 200 } as HttpResponseData;
-      case "function":
-        return {
-          label: "Function",
-          functionBody: "module.exports = function(msg) {\n  return msg;\n}",
-        } as FunctionData;
-      default:
-        return { label: `${type} node` };
-    }
-  };
-
   const handleNodeDataChange = useCallback(
-    (updatedData: Partial<HttpInData | HttpResponseData | FunctionData>) => {
+    (updatedData: any) => {
       if (!selectedNode) return;
-
-      console.log("Updating node:", selectedNode.id, "with data:", updatedData);
 
       setNodes((nds) =>
         nds.map((node) => {
@@ -234,6 +228,14 @@ function Flow() {
     [selectedNode]
   );
 
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        Loading workflow...
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen">
       <div className="flex-1 h-full" onDrop={onDrop} onDragOver={onDragOver}>
@@ -250,7 +252,7 @@ function Flow() {
           <Controls />
 
           <Panel position="top-left" className="m-4">
-            <AddNodeButton />
+            <AddNodeButton nodeTypes={availableNodeTypes} />
           </Panel>
 
           <Panel

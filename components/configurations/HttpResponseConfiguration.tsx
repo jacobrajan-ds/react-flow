@@ -12,21 +12,18 @@ const HttpResponseConfiguration: FC<HttpResponseConfigurationProps> = ({
 }) => {
   const data = node.data as HttpResponseData;
 
-  // Local state for input values
   const [label, setLabel] = useState(data.label || "");
   const [statusCode, setStatusCode] = useState(data.statusCode || 200);
   const [contentType, setContentType] = useState(
     data.contentType || "application/json"
   );
 
-  // Update local state when node changes
   useEffect(() => {
     setLabel(data.label || "");
     setStatusCode(data.statusCode || 200);
     setContentType(data.contentType || "application/json");
   }, [data, node.id]);
 
-  // Update parent when local state changes
   const updateParent = (updates: Partial<HttpResponseData>) => {
     onChange(updates);
   };

@@ -1,28 +1,40 @@
-// app/components/NodePanel.tsx
 import React, { FC, DragEvent, useState, useRef, useEffect } from "react";
-import { FiPlus, FiType, FiX } from "react-icons/fi";
+import { FiX } from "react-icons/fi";
+import { NodeTypeDefinition } from "@/app/types/flow";
 
 interface NodePanelProps {
   isOpen: boolean;
   onClose: () => void;
   position?: { x: number; y: number };
+  nodeTypes: NodeTypeDefinition[];
 }
 
 const NodePanel: FC<NodePanelProps> = ({
   isOpen,
   onClose,
   position = { x: 100, y: 100 },
+  nodeTypes,
 }) => {
-  const [activeTab, setActiveTab] = useState("Wireframe");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [categories, setCategories] = useState<string[]>([]);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (nodeTypes.length > 0) {
+      const uniqueCategories = Array.from(
+        new Set(nodeTypes.map((node) => node.category))
+      );
+      setCategories(uniqueCategories);
+      setActiveCategory(uniqueCategories[0] || null);
+    }
+  }, [nodeTypes]);
 
   const onDragStart = (event: DragEvent<HTMLDivElement>, nodeType: string) => {
     event.dataTransfer.setData("application/reactflow", nodeType);
     event.dataTransfer.effectAllowed = "move";
   };
 
-  // Close panel when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -42,48 +54,27 @@ const NodePanel: FC<NodePanelProps> = ({
     };
   }, [isOpen, onClose]);
 
-  // Filter nodes based on search term
-  const filterNodes = (nodes: { type: string; label: string }[]) => {
-    if (!searchTerm) return nodes;
-    return nodes.filter((node) =>
-      node.label.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  };
+  const filteredNodes = nodeTypes.filter((node) => {
+    const matchesSearch =
+      !searchTerm ||
+      node.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      node.description.toLowerCase().includes(searchTerm.toLowerCase());
 
-  // Node definitions by category
-  const nodeCategories = {
-    Wireframe: [
-      { type: "httpIn", label: "HTTP In" },
-      { type: "httpResponse", label: "HTTP Response" },
-      { type: "function", label: "Function" },
-    ],
-    // Shape: [
-    //   { type: "debug", label: "Debug" },
-    //   { type: "switch", label: "Switch" },
-    //   { type: "delay", label: "Delay" },
-    // ],
-    // Social: [
-    //   { type: "twitter", label: "Twitter" },
-    //   { type: "slack", label: "Slack" },
-    //   { type: "email", label: "Email" },
-    // ],
-  };
+    const matchesCategory = !activeCategory || node.category === activeCategory;
 
-  // Get nodes for the active tab
-  const activeNodes = filterNodes(
-    nodeCategories[activeTab as keyof typeof nodeCategories] || []
-  );
+    return matchesSearch && matchesCategory;
+  });
 
   if (!isOpen) return null;
 
   return (
     <div
-      className="fixed inset-0  flex items-center justify-center z-50"
+      className="fixed inset-0 flex items-center justify-center z-50"
       onClick={onClose}
     >
       <div
         ref={panelRef}
-        className="bg-white rounded-lg shadow-xl w-3xs max-h-[80vh] flex flex-col"
+        className="bg-white rounded-lg shadow-xl w-96 max-h-[80vh] flex flex-col"
         style={{
           position: "absolute",
           left: `${position.x}px`,
@@ -91,7 +82,6 @@ const NodePanel: FC<NodePanelProps> = ({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header with close button */}
         <div className="flex justify-between items-center p-4 border-b border-gray-200">
           <h2 className="font-bold text-lg">Add Node</h2>
           <button
@@ -102,12 +92,11 @@ const NodePanel: FC<NodePanelProps> = ({
           </button>
         </div>
 
-        {/* Search bar */}
         <div className="p-4">
           <div className="relative">
             <input
               type="text"
-              placeholder="Search"
+              placeholder="Search nodes..."
               className="w-full px-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -127,79 +116,61 @@ const NodePanel: FC<NodePanelProps> = ({
           </div>
         </div>
 
-        {/* Tabs */}
-        {/* <div className="flex border-b border-gray-200">
-          {Object.keys(nodeCategories).map((category) => (
-            <button
-              key={category}
-              className={`flex-1 py-2 text-center ${
-                activeTab === category
-                  ? "bg-gray-100 text-black font-medium"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`}
-              onClick={() => setActiveTab(category)}
-            >
-              {category}
-            </button>
-          ))}
-        </div> */}
-        {/* 
-        <div className="px-4 py-3 text-gray-500 text-sm">
-          Tap on a node or drag and drop it to add to the flow
-        </div> */}
-
-        <div className="flex-1 overflow-auto p-4">
-          <h3 className="font-bold text-lg mb-4">Content</h3>
-
-          <div className="grid grid-cols-2 gap-4">
-            {activeNodes.map((node, index) => (
-              <div
-                key={index}
-                className="bg-gray-50 p-4 rounded border border-gray-200 flex flex-col items-center cursor-grab hover:border-gray-300 transition-colors"
-                onDragStart={(e) => onDragStart(e, node.type)}
-                draggable
+        {categories.length > 0 && (
+          <div className="flex border-b border-gray-200 overflow-x-auto">
+            {categories.map((category) => (
+              <button
+                key={category}
+                className={`px-4 py-2 text-center whitespace-nowrap ${
+                  activeCategory === category
+                    ? "bg-gray-100 text-black font-medium border-b-2 border-blue-500"
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+                onClick={() => setActiveCategory(category)}
               >
-                <div className="w-full h-10 flex items-center justify-center mb-2 rounded">
-                  {getNodeIcon(node.type)}
-                </div>
-                <span className="text-center !text-[14px]">{node.label}</span>
-              </div>
+                {category}
+              </button>
             ))}
           </div>
+        )}
+
+        <div className="flex-1 overflow-auto p-4">
+          {filteredNodes.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              No nodes found matching your criteria
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              {filteredNodes.map((node, index) => (
+                <div
+                  key={index}
+                  className="bg-gray-50 p-4 rounded border border-gray-200 flex flex-col items-center cursor-grab hover:border-gray-300 transition-colors"
+                  onDragStart={(e) => onDragStart(e, node.id)}
+                  draggable
+                >
+                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2">
+                    {node.icon ? (
+                      <span className="text-gray-600 font-bold">
+                        {node.icon}
+                      </span>
+                    ) : (
+                      <span className="text-gray-600 font-bold">
+                        {node.label.charAt(0)}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-center font-medium">{node.label}</span>
+                  <span className="text-xs text-gray-500 text-center mt-1">
+                    {node.description}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
-
-// Helper function to get node icons
-function getNodeIcon(type: string) {
-  switch (type) {
-    case "httpIn":
-      return (
-        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-          <span className="text-blue-600 font-bold">IN</span>
-        </div>
-      );
-    case "httpResponse":
-      return (
-        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-          <span className="text-green-600 font-bold">OUT</span>
-        </div>
-      );
-    case "function":
-      return (
-        <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-          <span className="text-yellow-600 font-bold">FN</span>
-        </div>
-      );
-    default:
-      return (
-        <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-          <span className="text-gray-600 font-bold">?</span>
-        </div>
-      );
-  }
-}
 
 export default NodePanel;

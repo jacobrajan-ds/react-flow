@@ -1,4 +1,3 @@
-// components/nodes/HttpInNode.tsx
 import React, { FC } from "react";
 import { Handle, Position, NodeProps } from "@xyflow/react";
 import { HttpInData } from "@/app/types/flow";

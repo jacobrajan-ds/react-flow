@@ -12,7 +12,6 @@ const FunctionConfiguration: FC<FunctionConfigurationProps> = ({
 }) => {
   const data = node.data as FunctionData;
 
-  // Local state for input values
   const [label, setLabel] = useState(data.label || "");
   const [functionBody, setFunctionBody] = useState(
     data.functionBody ||
@@ -22,7 +21,6 @@ const FunctionConfiguration: FC<FunctionConfigurationProps> = ({
 }`
   );
 
-  // Update local state when node changes
   useEffect(() => {
     setLabel(data.label || "");
     setFunctionBody(
@@ -34,7 +32,6 @@ const FunctionConfiguration: FC<FunctionConfigurationProps> = ({
     );
   }, [data, node.id]);
 
-  // Update parent when local state changes
   const updateParent = (updates: Partial<FunctionData>) => {
     onChange(updates);
   };

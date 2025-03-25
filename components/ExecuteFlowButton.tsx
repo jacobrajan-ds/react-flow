@@ -22,6 +22,13 @@ const ExecuteFlowButton: FC<ExecuteFlowButtonProps> = ({
 
     try {
       const nodes = getNodes();
+      const edges = getEdges();
+
+      console.log("Current flow state:", {
+        nodes: nodes.map((n) => ({ id: n.id, type: n.type })),
+        edges,
+      });
+
       const httpInNodes = nodes.filter((node) => node.type === "httpIn");
 
       if (httpInNodes.length === 0) {
@@ -31,8 +38,14 @@ const ExecuteFlowButton: FC<ExecuteFlowButtonProps> = ({
       }
 
       const startNode = httpInNodes[0];
+      console.log(
+        "Starting execution from node:",
+        startNode.id,
+        startNode.data
+      );
 
-      await saveFlow(flowId, nodes, getEdges());
+      await saveFlow(flowId, nodes, edges);
+      console.log("Flow saved before execution");
 
       setNodes((nodes) =>
         nodes.map((node) => ({
@@ -67,17 +80,18 @@ const ExecuteFlowButton: FC<ExecuteFlowButtonProps> = ({
         }
       );
 
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
         if (onExecutionComplete) {
           onExecutionComplete(data.result, data.logs || []);
         }
       } else {
-        const error = await response.json();
+        console.error("Execution failed:", data);
         if (onExecutionComplete) {
           onExecutionComplete(
-            { error: error.message || "Execution failed" },
-            []
+            { error: data.message || "Execution failed" },
+            data.logs || []
           );
         }
       }
@@ -107,12 +121,12 @@ const ExecuteFlowButton: FC<ExecuteFlowButtonProps> = ({
     edges: CustomEdge[]
   ) => {
     try {
-      await fetch("/api/save-flow", {
+      await fetch("/api/workflows", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ flowId, nodes, edges }),
+        body: JSON.stringify({ id: flowId, nodes, edges }),
       });
     } catch (error) {
       console.error("Error saving flow:", error);

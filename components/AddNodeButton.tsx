@@ -1,9 +1,13 @@
-// app/components/AddNodeButton.tsx
 import React, { FC, useState } from "react";
 import { FiPlus } from "react-icons/fi";
 import NodePanel from "./NodePanel";
+import { NodeTypeDefinition } from "@/app/types/flow";
 
-const AddNodeButton: FC = () => {
+interface AddNodeButtonProps {
+  nodeTypes: NodeTypeDefinition[];
+}
+
+const AddNodeButton: FC<AddNodeButtonProps> = ({ nodeTypes }) => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [panelPosition, setPanelPosition] = useState({ x: 0, y: 0 });
 
@@ -30,6 +34,7 @@ const AddNodeButton: FC = () => {
         isOpen={isPanelOpen}
         onClose={() => setIsPanelOpen(false)}
         position={panelPosition}
+        nodeTypes={nodeTypes}
       />
     </>
   );

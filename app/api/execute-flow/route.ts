@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CustomNode, CustomEdge } from "@/app/types/flow";
-import { savedFlows } from "../save-flow/route";
+import { savedFlows } from "../workflows/route";
 import { FlowEngine } from "@/lib/flowEngine";
 
 export async function POST(request: NextRequest) {
@@ -16,9 +15,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(`Executing flow ${flowId} starting from node ${nodeId}`);
+
     const flow = savedFlows[flowId];
     if (!flow) {
       return NextResponse.json({ error: "Flow not found" }, { status: 404 });
+    }
+
+    const startNode = flow.nodes.find((node) => node.id === nodeId);
+    if (!startNode) {
+      return NextResponse.json(
+        {
+          error: "Start node not found",
+          message: `Node with ID ${nodeId} not found in flow`,
+        },
+        { status: 400 }
+      );
+    }
+
+    if (startNode.type !== "httpIn") {
+      return NextResponse.json(
+        {
+          error: "Invalid start node",
+          message: `Node with ID ${nodeId} is not an HTTP In node`,
+        },
+        { status: 400 }
+      );
     }
 
     const engine = new FlowEngine({ nodes: flow.nodes, edges: flow.edges });
@@ -32,12 +54,13 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(result);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error executing flow:", error);
     return NextResponse.json(
       {
         error: "Error executing flow",
         message: error instanceof Error ? error.message : "Unknown error",
+        logs: error.logs || [],
       },
       { status: 500 }
     );

@@ -1,0 +1,95 @@
+{
+  "flow-1742897421067": {
+    "nodes": [
+      {
+        "id": "httpIn-1742899937028",
+        "type": "httpIn",
+        "position": {
+          "x": 182,
+          "y": 359
+        },
+        "data": {
+          "label": "HTTP In",
+          "method": "GET",
+          "url": "/api"
+        },
+        "measured": {
+          "width": 192,
+          "height": 58
+        },
+        "style": {},
+        "selected": false,
+        "dragging": false
+      },
+      {
+        "id": "function-1742900042324",
+        "type": "function",
+        "position": {
+          "x": 484.91593625498,
+          "y": 311.1741035856574
+        },
+        "data": {
+          "label": "Function",
+          "functionBody": "module.exports = function(msg) {\n  // Your code here\n  \nreturn \"Hello\";\n\n}"
+        },
+        "measured": {
+          "width": 192,
+          "height": 58
+        },
+        "selected": true,
+        "dragging": false,
+        "style": {}
+      },
+      {
+        "id": "httpResponse-1742900060008",
+        "type": "httpResponse",
+        "position": {
+          "x": 785.3573705179282,
+          "y": 413.14342629482087
+        },
+        "data": {
+          "label": "HTTP Response",
+          "statusCode": "200",
+          "contentType": "application/json"
+        },
+        "measured": {
+          "width": 192,
+          "height": 58
+        },
+        "selected": false,
+        "dragging": false,
+        "style": {}
+      }
+    ],
+    "edges": [
+      {
+        "source": "httpIn-1742899937028",
+        "sourceHandle": "output",
+        "target": "httpResponse-1742899938403",
+        "targetHandle": "input",
+        "id": "xy-edge__httpIn-1742899937028output-httpResponse-1742899938403input"
+      },
+      {
+        "source": "httpIn-1742899937028",
+        "sourceHandle": "output",
+        "target": "function-1742900042324",
+        "targetHandle": "input",
+        "id": "xy-edge__httpIn-1742899937028output-function-1742900042324input"
+      },
+      {
+        "source": "function-1742900042324",
+        "sourceHandle": "output",
+        "target": "httpResponse-1742900060008",
+        "targetHandle": "input",
+        "id": "xy-edge__function-1742900042324output-httpResponse-1742900060008input"
+      },
+      {
+        "source": "httpIn-1742901697196",
+        "sourceHandle": "output",
+        "target": "httpResponse-1742900060008",
+        "targetHandle": "input",
+        "id": "xy-edge__httpIn-1742901697196output-httpResponse-1742900060008input"
+      }
+    ]
+  }
+}

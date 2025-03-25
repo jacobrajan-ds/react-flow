@@ -1,5 +1,4 @@
-// app/components/SaveFlowButton.tsx
-import React, { FC } from "react";
+import React, { FC, useState } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { CustomNode, CustomEdge } from "@/app/types/flow";
 
@@ -9,47 +8,69 @@ interface SaveFlowButtonProps {
 
 const SaveFlowButton: FC<SaveFlowButtonProps> = ({ flowId }) => {
   const { getNodes, getEdges } = useReactFlow<CustomNode, CustomEdge>();
-  const [isSaving, setIsSaving] = React.useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">(
+    "idle"
+  );
 
   const saveFlow = async () => {
+    if (!flowId) return;
+
     setIsSaving(true);
+    setSaveStatus("idle");
+
     const nodes = getNodes();
     const edges = getEdges();
 
     try {
-      const response = await fetch("/api/save-flow", {
+      const response = await fetch("/api/workflows", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          flowId,
+          id: flowId,
           nodes,
           edges,
         }),
       });
 
       if (response.ok) {
-        alert("Flow saved successfully!");
+        setSaveStatus("success");
+        setTimeout(() => setSaveStatus("idle"), 2000);
       } else {
-        alert("Failed to save flow");
+        setSaveStatus("error");
       }
     } catch (error) {
       console.error("Error saving flow:", error);
-      alert("Error saving flow");
+      setSaveStatus("error");
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <button
-      className="bg-gray-600 text-white px-4 py-2 rounded disabled:bg-blue-400"
-      onClick={saveFlow}
-      disabled={isSaving}
-    >
-      {isSaving ? "Saving..." : "Save Flow"}
-    </button>
+    <div className="relative">
+      <button
+        className={`px-4 py-2 rounded ${
+          saveStatus === "success"
+            ? "bg-green-500 text-white"
+            : saveStatus === "error"
+            ? "bg-red-500 text-white"
+            : "bg-gray-600 text-white"
+        } disabled:bg-gray-400`}
+        onClick={saveFlow}
+        disabled={isSaving}
+      >
+        {isSaving
+          ? "Saving..."
+          : saveStatus === "success"
+          ? "Saved!"
+          : saveStatus === "error"
+          ? "Failed!"
+          : "Save Flow"}
+      </button>
+    </div>
   );
 };
 
