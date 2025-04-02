@@ -1,6 +1,8 @@
-import React, { FC, useState } from "react";
+import React, { FC, useEffect, useState } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { CustomNode, CustomEdge } from "@/app/types/flow";
+import { FaCheck, FaSave } from "react-icons/fa";
+import { MdDataSaverOff } from "react-icons/md";
 
 interface SaveFlowButtonProps {
   flowId: string;
@@ -12,6 +14,27 @@ const SaveFlowButton: FC<SaveFlowButtonProps> = ({ flowId }) => {
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">(
     "idle"
   );
+  const [workflowTitle, setWorkflowTitle] = useState("");
+
+  useEffect(() => {
+    async function fetchWorkflowTitle() {
+      try {
+        const response = await fetch(`/api/workflows/${flowId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.title) {
+            setWorkflowTitle(data.title);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching workflow title:", error);
+      }
+    }
+
+    if (flowId) {
+      fetchWorkflowTitle();
+    }
+  }, [flowId]);
 
   const saveFlow = async () => {
     if (!flowId) return;
@@ -32,6 +55,7 @@ const SaveFlowButton: FC<SaveFlowButtonProps> = ({ flowId }) => {
           id: flowId,
           nodes,
           edges,
+          title: workflowTitle || `Workflow ${flowId.substring(0, 8)}`,
         }),
       });
 
@@ -52,7 +76,7 @@ const SaveFlowButton: FC<SaveFlowButtonProps> = ({ flowId }) => {
   return (
     <div className="relative">
       <button
-        className={`px-4 py-2 rounded ${
+        className={`px-2 py-2 rounded ${
           saveStatus === "success"
             ? "bg-green-500 text-white"
             : saveStatus === "error"
@@ -62,13 +86,19 @@ const SaveFlowButton: FC<SaveFlowButtonProps> = ({ flowId }) => {
         onClick={saveFlow}
         disabled={isSaving}
       >
-        {isSaving
-          ? "Saving..."
-          : saveStatus === "success"
-          ? "Saved!"
-          : saveStatus === "error"
-          ? "Failed!"
-          : "Save Flow"}
+        {isSaving ? (
+          <div className="animate-spin">
+            <MdDataSaverOff />
+          </div>
+        ) : saveStatus === "success" ? (
+          <div className="">
+            <FaCheck />
+          </div>
+        ) : saveStatus === "error" ? (
+          "Failed!"
+        ) : (
+          <FaSave />
+        )}
       </button>
     </div>
   );

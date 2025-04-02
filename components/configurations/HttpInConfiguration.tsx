@@ -12,19 +12,16 @@ const HttpInConfiguration: FC<HttpInConfigurationProps> = ({
 }) => {
   const data = node.data as HttpInData;
 
-  // Local state for input values
   const [label, setLabel] = useState(data.label || "");
   const [method, setMethod] = useState(data.method || "GET");
   const [url, setUrl] = useState(data.url || "/");
 
-  // Update local state when node changes
   useEffect(() => {
     setLabel(data.label || "");
     setMethod(data.method || "GET");
     setUrl(data.url || "/");
   }, [data, node.id]);
 
-  // Update parent when local state changes
   const updateParent = (updates: Partial<HttpInData>) => {
     onChange(updates);
   };

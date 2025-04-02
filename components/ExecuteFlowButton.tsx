@@ -1,6 +1,7 @@
 import React, { FC, useState } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { CustomNode, CustomEdge } from "@/app/types/flow";
+import { FaPlay, FaSpinner } from "react-icons/fa";
 
 interface ExecuteFlowButtonProps {
   flowId: string;
@@ -135,11 +136,19 @@ const ExecuteFlowButton: FC<ExecuteFlowButtonProps> = ({
 
   return (
     <button
-      className="bg-green-500 text-white px-4 py-2 rounded disabled:bg-gray-400"
+      className="bg-green-500 text-white px-2 py-2 rounded disabled:bg-gray-400"
       onClick={executeFlow}
       disabled={isExecuting}
     >
-      {isExecuting ? "Executing..." : "Execute Flow"}
+      {isExecuting ? (
+        <>
+          <FaSpinner className="animate-spin" />
+        </>
+      ) : (
+        <>
+          <FaPlay className="animate-pulse" />
+        </>
+      )}{" "}
     </button>
   );
 };

@@ -1,6 +1,11 @@
 import React, { FC, useState, useEffect } from "react";
 import { CustomNode } from "@/app/types/flow";
+import dynamic from "next/dynamic";
 
+const MonacoEditor = dynamic(
+  () => import("@monaco-editor/react").then((mod) => mod.default),
+  { ssr: false }
+);
 interface NodeConfigurationProps {
   node: CustomNode;
   onChange: (updatedData: any) => void;
@@ -79,12 +84,12 @@ const NodeConfiguration: FC<NodeConfigurationProps> = ({ node, onChange }) => {
         </div>
       ))}
 
-      <details className="mt-4 text-xs">
+      {/* <details className="mt-4 text-xs">
         <summary className="cursor-pointer text-gray-500">Debug Info</summary>
         <pre className="mt-2 p-2 bg-gray-100 rounded overflow-auto max-h-40">
           {JSON.stringify(localData, null, 2)}
         </pre>
-      </details>
+      </details> */}
     </div>
   );
 };
@@ -106,7 +111,7 @@ function renderField(
       return (
         <input
           type="text"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md"
+          className="w-full px-3 py-2 border border-gray-700 rounded-md !focus:ring-0 focus:outline-0"
           value={value}
           onChange={(e) => {
             e.stopPropagation();
@@ -119,7 +124,7 @@ function renderField(
       return (
         <input
           type="number"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md"
+          className="w-full px-3 py-2 border border-gray-700 rounded-md focus:outline-0"
           value={value}
           onChange={(e) => {
             e.stopPropagation();
@@ -133,7 +138,7 @@ function renderField(
     case "select":
       return (
         <select
-          className="w-full px-3 py-2 border border-gray-300 rounded-md"
+          className="w-full px-3 py-2 border border-gray-700 rounded-md focus:outline-0"
           value={value}
           onChange={(e) => {
             e.stopPropagation();
@@ -150,21 +155,33 @@ function renderField(
       );
     case "code":
       return (
-        <textarea
-          className="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm h-64"
-          value={value}
-          onChange={(e) => {
-            e.stopPropagation();
-            onFieldChange(field.id, e.target.value);
-          }}
-          onClick={(e) => e.stopPropagation()}
-        />
+        <div className="border border-gray-700 rounded-md h-64">
+          <MonacoEditor
+            height="100%"
+            language={field.language || "javascript"}
+            theme="vs-dark"
+            value={value}
+            options={{
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false,
+              fontSize: 14,
+              automaticLayout: true,
+              lineNumbers: "off",
+            }}
+            onChange={(newValue) => {
+              onFieldChange(field.id, newValue || "");
+            }}
+            onMount={(editor) => {
+              editor.updateOptions({ tabSize: 2 });
+            }}
+          />
+        </div>
       );
     case "checkbox":
       return (
         <input
           type="checkbox"
-          className="h-4 w-4 border border-gray-300 rounded"
+          className="h-4 w-4 border border-gray-700 rounded"
           checked={!!value}
           onChange={(e) => {
             e.stopPropagation();

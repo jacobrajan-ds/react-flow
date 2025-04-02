@@ -74,7 +74,7 @@ const NodePanel: FC<NodePanelProps> = ({
     >
       <div
         ref={panelRef}
-        className="bg-white rounded-lg shadow-xl w-96 max-h-[80vh] flex flex-col"
+        className="bg-[#071026] rounded-lg shadow-xl w-60 text-white max-h-[80vh] flex flex-col"
         style={{
           position: "absolute",
           left: `${position.x}px`,
@@ -82,7 +82,7 @@ const NodePanel: FC<NodePanelProps> = ({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center p-4 border-b border-gray-200">
+        <div className="flex justify-between items-center p-4 border-b border-gray-600">
           <h2 className="font-bold text-lg">Add Node</h2>
           <button
             className="text-gray-500 hover:text-gray-700"
@@ -97,7 +97,7 @@ const NodePanel: FC<NodePanelProps> = ({
             <input
               type="text"
               placeholder="Search nodes..."
-              className="w-full px-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-10 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-none"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -117,20 +117,22 @@ const NodePanel: FC<NodePanelProps> = ({
         </div>
 
         {categories.length > 0 && (
-          <div className="flex border-b border-gray-200 overflow-x-auto">
-            {categories.map((category) => (
-              <button
-                key={category}
-                className={`px-4 py-2 text-center whitespace-nowrap ${
-                  activeCategory === category
-                    ? "bg-gray-100 text-black font-medium border-b-2 border-blue-500"
-                    : "text-gray-600 hover:bg-gray-50"
-                }`}
-                onClick={() => setActiveCategory(category)}
-              >
-                {category}
-              </button>
-            ))}
+          <div className="px-3">
+            <div className="flex rounded-md gap-1 overflow-x-auto bg-[#0c3a4c] p-1">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  className={`p-2 rounded-md text-xs text-center whitespace-nowrap ${
+                    activeCategory === category
+                      ? "bg-[#0b253a] text-white "
+                      : "text-white"
+                  }`}
+                  onClick={() => setActiveCategory(category)}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -144,15 +146,13 @@ const NodePanel: FC<NodePanelProps> = ({
               {filteredNodes.map((node, index) => (
                 <div
                   key={index}
-                  className="bg-gray-50 p-4 rounded border border-gray-200 flex flex-col items-center cursor-grab hover:border-gray-300 transition-colors"
+                  className=" p-4 rounded border border-gray-600 flex flex-col items-center cursor-grab hover:border-gray-300 transition-colors"
                   onDragStart={(e) => onDragStart(e, node.id)}
                   draggable
                 >
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2">
+                  <div className="w-12 h-12 bg-[#0c3a4c] text-white rounded-full flex items-center justify-center mb-2">
                     {node.icon ? (
-                      <span className="text-gray-600 font-bold">
-                        {node.icon}
-                      </span>
+                      <span className=" font-bold">{node.icon}</span>
                     ) : (
                       <span className="text-gray-600 font-bold">
                         {node.label.charAt(0)}
@@ -161,7 +161,7 @@ const NodePanel: FC<NodePanelProps> = ({
                   </div>
                   <span className="text-center font-medium">{node.label}</span>
                   <span className="text-xs text-gray-500 text-center mt-1">
-                    {node.description}
+                    {/* {node.description} */}
                   </span>
                 </div>
               ))}

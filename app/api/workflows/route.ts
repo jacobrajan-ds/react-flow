@@ -38,10 +38,15 @@ function saveWorkflows(workflows: any) {
 
 export let savedFlows = loadWorkflows();
 
+export async function GET() {
+  const workflowIds = Object.keys(savedFlows);
+  return NextResponse.json(workflowIds);
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, nodes, edges } = body;
+    const { id, nodes, edges, title, description } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -50,7 +55,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    savedFlows[id] = { nodes, edges };
+    savedFlows[id] = {
+      nodes: nodes || [],
+      edges: edges || [],
+      title: title || `Workflow ${id.substring(0, 8)}`,
+      description: description || "",
+    };
     saveWorkflows(savedFlows);
 
     console.log(
@@ -72,9 +82,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-export async function GET() {
-  const workflowIds = Object.keys(savedFlows);
-  return NextResponse.json(workflowIds);
 }

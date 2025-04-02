@@ -1,317 +1,221 @@
-"use client";
-
-import React, { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Sidebar from "@/components/Sidebar";
+import WorkflowCard from "@/components/WorkflowCard";
+import WorkflowTable from "@/components/WorkflowTable";
+import WorkflowForm from "@/components/WorkflowForm";
 import {
-  ReactFlow,
-  ReactFlowProvider,
-  addEdge,
-  Background,
-  Controls,
-  Panel,
-  useReactFlow,
-  NodeTypes,
-  OnConnect,
-  NodeMouseHandler,
-  Connection,
-  applyNodeChanges,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
-import { useRouter, useSearchParams } from "next/navigation";
+  Search,
+  Grid,
+  List,
+  FileText,
+  Sliders,
+  LayoutGrid,
+  CirclePlus,
+} from "lucide-react";
 
-import { CustomNode, CustomEdge, NodeTypeDefinition } from "./types/flow";
-import FunctionNode from "@/components/nodes/FunctionNode";
-import HttpResponseNode from "@/components/nodes/HttpResponseNode";
-import HttpInNode from "@/components/nodes/HttpInNode";
-import NodePanel from "@/components/NodePanel";
-import SaveFlowButton from "@/components/SaveFlowButton";
-import ExecuteFlowButton from "@/components/ExecuteFlowButton";
-import NodeConfiguration from "@/components/configurations/NodeConfiguration";
-import DebugPanel from "@/components/DebugPanel";
-import AddNodeButton from "@/components/AddNodeButton";
-
-function Flow() {
-  const [nodes, setNodes] = useState<CustomNode[]>([]);
-  const [edges, setEdges] = useState<CustomEdge[]>([]);
-  const [selectedNode, setSelectedNode] = useState<CustomNode | null>(null);
-  const [flowId, setFlowId] = useState<string>("");
-  const [logs, setLogs] = useState<string[]>([]);
-  const [isDebugVisible, setIsDebugVisible] = useState(false);
-  const [executionResult, setExecutionResult] = useState<any>(null);
-  const [nodeTypes, setNodeTypes] = useState<NodeTypes>({});
-  const [availableNodeTypes, setAvailableNodeTypes] = useState<
-    NodeTypeDefinition[]
-  >([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const reactFlowInstance = useReactFlow();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const workflowIdParam = searchParams.get("id");
-
-  useEffect(() => {
-    const defaultNodeTypes: NodeTypes = {
-      httpIn: HttpInNode,
-      httpResponse: HttpResponseNode,
-      function: FunctionNode,
-    };
-    setNodeTypes(defaultNodeTypes);
-  }, []);
-
-  useEffect(() => {
-    async function fetchNodeTypes() {
-      try {
-        const response = await fetch("/api/node-types");
-        if (!response.ok) throw new Error("Failed to fetch node types");
-        const data = await response.json();
-        setAvailableNodeTypes(data);
-      } catch (error) {
-        console.error("Error loading node types:", error);
-      }
-    }
-
-    fetchNodeTypes();
-  }, []);
-
-  useEffect(() => {
-    async function loadWorkflow(id: string) {
-      setIsLoading(true);
-      try {
-        const response = await fetch(`/api/workflows/${id}`);
-        if (response.ok) {
-          const data = await response.json();
-          setFlowId(id);
-          setNodes(data.nodes || []);
-          setEdges(data.edges || []);
-        } else if (response.status === 404) {
-          // Workflow doesn't exist yet, initialize it
-          console.log(`Workflow ${id} not found, initializing new workflow`);
-          setFlowId(id);
-          setNodes([]);
-          setEdges([]);
-          saveNewWorkflow(id);
-        } else {
-          console.error("Error loading workflow:", await response.text());
-        }
-      } catch (error) {
-        console.error("Error loading workflow:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    if (workflowIdParam) {
-      loadWorkflow(workflowIdParam);
-    } else {
-      const newFlowId = `flow-${Date.now()}`;
-      setFlowId(newFlowId);
-      router.push(`?id=${newFlowId}`);
-      setNodes([]);
-      setEdges([]);
-      saveNewWorkflow(newFlowId);
-      setIsLoading(false);
-    }
-  }, [workflowIdParam, router]);
-
-  const saveNewWorkflow = async (id: string) => {
-    try {
-      const response = await fetch("/api/workflows", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id,
-          nodes: [],
-          edges: [],
-        }),
-      });
-
-      if (!response.ok) {
-        console.error("Failed to initialize workflow:", await response.text());
-      } else {
-        console.log("New workflow initialized:", id);
-      }
-    } catch (error) {
-      console.error("Error initializing workflow:", error);
-    }
-  };
-
-  const onConnect: OnConnect = useCallback((params: Connection) => {
-    setEdges((eds) => addEdge(params, eds));
-  }, []);
-
-  const onNodeClick: NodeMouseHandler = useCallback((_, node) => {
-    setSelectedNode(node as CustomNode);
-  }, []);
-
-  const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-  }, []);
-
-  const onPaneClick = useCallback((event: React.MouseEvent) => {
-    setSelectedNode(null);
-  }, []);
-
-  const onDrop = useCallback(
-    async (event: React.DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      const nodeType = event.dataTransfer.getData("application/reactflow");
-      if (!nodeType) return;
-
-      // Get the current pane position
-      const reactFlowBounds = document
-        .querySelector(".react-flow")
-        ?.getBoundingClientRect();
-      if (!reactFlowBounds) return;
-
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
-      });
-
-      try {
-        const response = await fetch(`/api/node-config/${nodeType}`);
-        if (!response.ok) throw new Error("Failed to fetch node config");
-        const configSchema = await response.json();
-
-        const defaultData: any = {
-          label: configSchema.defaultLabel || `${nodeType} node`,
-        };
-
-        if (configSchema.fields) {
-          configSchema.fields.forEach((field: any) => {
-            if (field.defaultValue !== undefined) {
-              defaultData[field.id] = field.defaultValue;
-            }
-          });
-        }
-
-        const newNode = {
-          id: `${nodeType}-${Date.now()}`,
-          type: nodeType,
-          position,
-          data: defaultData,
-        };
-
-        setNodes((nds) => nds.concat(newNode as CustomNode));
-      } catch (error) {
-        console.error("Error creating node:", error);
-      }
-    },
-    [reactFlowInstance]
-  );
-
-  const onNodesChange = (changes: any) => {
-    setNodes((nds) => applyNodeChanges(changes, nds));
-  };
-
-  const handleNodeDataChange = useCallback(
-    (updatedData: any) => {
-      if (!selectedNode) return;
-
-      setNodes((nds) =>
-        nds.map((node) => {
-          if (node.id === selectedNode.id) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                ...updatedData,
-              },
-            };
-          }
-          return node;
-        })
-      );
-    },
-    [selectedNode]
-  );
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        Loading workflow...
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-screen">
-      <div className="flex-1 h-full" onDrop={onDrop} onDragOver={onDragOver}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          nodeTypes={nodeTypes}
-          onPaneClick={onPaneClick}
-          onNodesChange={onNodesChange}
-        >
-          <Background />
-          <Controls />
-
-          <Panel position="top-left" className="m-4">
-            <AddNodeButton nodeTypes={availableNodeTypes} />
-          </Panel>
-
-          <Panel
-            position="top-right"
-            className="bg-white p-3 rounded shadow-md"
-          >
-            <div className="flex gap-2">
-              <SaveFlowButton flowId={flowId} />
-              <ExecuteFlowButton
-                flowId={flowId}
-                onExecutionComplete={(result, executionLogs) => {
-                  setExecutionResult(result);
-                  setLogs(executionLogs);
-                  setIsDebugVisible(true);
-                }}
-              />
-              <button
-                className="bg-gray-600 text-white px-4 py-2 rounded"
-                onClick={() => setIsDebugVisible(!isDebugVisible)}
-              >
-                {isDebugVisible ? "Hide" : "Show"} Debug Panel
-              </button>
-            </div>
-          </Panel>
-        </ReactFlow>
-      </div>
-
-      {selectedNode && (
-        <div className="w-80 bg-gray-100 p-4 overflow-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold">Node Configuration</h3>
-            <button
-              className="text-gray-500 hover:text-gray-700"
-              onClick={() => setSelectedNode(null)}
-            >
-              ✕
-            </button>
-          </div>
-          <NodeConfiguration
-            node={selectedNode}
-            onChange={handleNodeDataChange}
-          />
-        </div>
-      )}
-
-      <DebugPanel
-        logs={logs}
-        result={executionResult}
-        isVisible={isDebugVisible}
-        onClose={() => setIsDebugVisible(false)}
-      />
-    </div>
-  );
+interface Workflow {
+  id: string;
+  name: string;
+  description: string;
+  parent_id?: string;
+  actions?: { app_name?: string; large_image?: string }[];
+  triggers?: { id: string; name: string }[];
+  schedules?: number;
 }
 
-export default function FlowEditor() {
+export default function WorkflowPage() {
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentView, setCurrentView] = useState("board");
+  const [openModal, setOpenModal] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    fetchWorkflows();
+  }, []);
+
+  const fetchWorkflows = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/collections");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+
+      // Transform the data to match our Workflow interface
+      const workflowList: Workflow[] = data.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        parent_id: item.parent_id,
+        // Add empty arrays for these properties to avoid undefined errors
+        actions: [],
+        triggers: [],
+        schedules: 0,
+      }));
+
+      setWorkflows(workflowList);
+    } catch (error) {
+      console.error("Error fetching workflows:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const searchValue = e.target.value.toLowerCase();
+
+    if (searchValue === "") {
+      fetchWorkflows(); // Reset to all workflows
+    } else {
+      // Filter workflows by name or description
+      const filtered = workflows.filter(
+        (workflow) =>
+          workflow.name.toLowerCase().includes(searchValue) ||
+          workflow.description.toLowerCase().includes(searchValue)
+      );
+      setWorkflows(filtered);
+    }
+  };
+
+  const handleCardClick = (workflowId: string) => {
+    router.push(`/workflow/${workflowId}`);
+  };
+
+  const handleCreateSuccess = () => {
+    fetchWorkflows();
+    setOpenModal(false);
+  };
+
   return (
-    <ReactFlowProvider>
-      <Flow />
-    </ReactFlowProvider>
+    <div className="flex h-screen bg-[#131B2F] text-white">
+      <Sidebar />
+
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-screen-xl mx-auto p-9">
+          <div>
+            <h1 className="text-[24px] font-bold text-white">Workflows</h1>
+          </div>
+
+          <div className="py-2"></div>
+
+          <div className="w-full py-4 flex justify-between items-center">
+            {/* View toggles */}
+            <div className="flex justify-between items-center bg-[#071026] border-[#00F6FF] border rounded-lg p-1.5 relative w-72 px-4">
+              <div
+                className={`absolute h-[85%] top-[7.5%] rounded-md bg-[#00F6FF] transition-all duration-300 ease-in-out ${
+                  currentView === "board"
+                    ? "left-[1%] w-[49%]"
+                    : "left-[50%] w-[49%]"
+                }`}
+              />
+              <button
+                onClick={() => setCurrentView("board")}
+                className={`z-10 flex items-center gap-2 py-1 rounded-md text-[16px] transition-colors duration-300 ${
+                  currentView === "board"
+                    ? "text-[#071026] font-medium"
+                    : "text-gray-400"
+                }`}
+              >
+                <Grid size={18} />
+                <span>Board View</span>
+              </button>
+              <button
+                onClick={() => setCurrentView("list")}
+                className={`z-10 flex items-center gap-2 py-1 rounded-md text-[16px] transition-colors duration-300 ${
+                  currentView === "list"
+                    ? "text-[#071026] font-medium"
+                    : "text-gray-400"
+                }`}
+              >
+                <List size={18} />
+                <span>List View</span>
+              </button>
+            </div>
+
+            {/* Search and controls */}
+            <div className="flex items-center gap-3">
+              <span className="bg-gradient-to-r from-[#00F6FF] to-[#61DDFF] w-[1px] h-[40px] me-6"></span>
+
+              <div className="relative">
+                <Search
+                  className="absolute left-3 top-2.5 text-gray-400"
+                  size={18}
+                />
+                <input
+                  type="text"
+                  placeholder="Search Workflows"
+                  onChange={handleSearch}
+                  className="bg-[#071026] pl-10 pr-4 py-2 rounded-md text-gray-300 placeholder-gray-300 focus:outline-none border border-[#00F6FF]"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button className="p-2 rounded bg-[#071026] text-gray-300 hover:bg-gray-700">
+                  <FileText size={20} />
+                </button>
+                <button className="p-2 rounded bg-[#071026] text-gray-300 hover:bg-gray-700">
+                  <Sliders size={20} />
+                </button>
+                <button className="p-2 rounded bg-[#071026] text-gray-300 hover:bg-gray-700">
+                  <LayoutGrid size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Workflow content */}
+          <div className="mt-2">
+            <div className="flex items-center justify-between mb-10">
+              <div>{/* Tab navigation can be added here if needed */}</div>
+              <button
+                onClick={() => setOpenModal(true)}
+                className="bg-[#071026] flex size-10 justify-center items-center rounded-full border-dashed border-[2px] border-[#00F6FF] hover:bg-[#0A162E] transition-colors"
+              >
+                <CirclePlus color="#00F6FF" />
+              </button>
+            </div>
+
+            <WorkflowForm
+              openModal={openModal}
+              setOpenModal={setOpenModal}
+              onSuccess={handleCreateSuccess}
+            />
+
+            {currentView === "board" ? (
+              <div className="flex flex-wrap gap-4">
+                {loading
+                  ? Array(4)
+                      .fill(null)
+                      .map((_, index) => (
+                        <WorkflowCard
+                          key={`loading-${index}`}
+                          isLoading={true}
+                        />
+                      ))
+                  : workflows.map((workflow) => (
+                      <div
+                        key={workflow?.id}
+                        onClick={() => handleCardClick(workflow.id)}
+                      >
+                        <WorkflowCard workflow={workflow} />
+                      </div>
+                    ))}
+              </div>
+            ) : (
+              <div className="mt-2">
+                <WorkflowTable
+                  workflows={workflows}
+                  isLoading={loading}
+                  setOpenModal={setOpenModal}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

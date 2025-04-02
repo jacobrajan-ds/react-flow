@@ -24,7 +24,7 @@ const AddNodeButton: FC<AddNodeButtonProps> = ({ nodeTypes }) => {
   return (
     <>
       <button
-        className="bg-white text-gray-700 rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-gray-200 transition-colors"
+        className="bg-[#071026] text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-[#071026] transition-colors"
         onClick={handleOpenPanel}
       >
         <FiPlus size={24} />
