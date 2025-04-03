@@ -1,8 +1,8 @@
-workflow_form_component = """
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { X } from 'lucide-react';
+import { useState } from "react";
+import { X } from "lucide-react";
+import axiosInstance from "@/utils/axios";
 
 interface WorkflowFormProps {
   openModal: boolean;
@@ -16,14 +16,14 @@ interface NewWorkflow {
   parent_id: string | null;
 }
 
-export default function WorkflowForm({ 
-  openModal, 
+export default function WorkflowForm({
+  openModal,
   setOpenModal,
-  onSuccess
+  onSuccess,
 }: WorkflowFormProps) {
   const [newWorkflow, setNewWorkflow] = useState<NewWorkflow>({
-    name: '',
-    description: '',
+    name: "",
+    description: "",
     parent_id: null,
   });
   const [isCreating, setIsCreating] = useState<boolean>(false);
@@ -33,27 +33,21 @@ export default function WorkflowForm({
     e.preventDefault();
     setIsCreating(true);
     setError(null);
-    
+
     try {
-      const response = await fetch('/api/collections', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newWorkflow),
-      });
+      const response = await axiosInstance.post("/api/collection", newWorkflow);
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create workflow');
+        const errorData = response.data;
+        throw new Error(errorData.message || "Failed to create workflow");
       }
 
-      const data = await response.json();
-      setNewWorkflow({ name: '', description: '', parent_id: null });
+      const data = response.data;
+      setNewWorkflow({ name: "", description: "", parent_id: null });
       onSuccess();
     } catch (err: any) {
-      console.error('Error creating workflow:', err);
-      setError(err.message || 'An error occurred while creating the workflow');
+      console.error("Error creating workflow:", err);
+      setError(err.message || "An error occurred while creating the workflow");
     } finally {
       setIsCreating(false);
     }
@@ -82,7 +76,7 @@ export default function WorkflowForm({
               {error}
             </div>
           )}
-          
+
           <form onSubmit={handleCreateWorkflow}>
             <div className="mb-4">
               <label

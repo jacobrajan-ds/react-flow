@@ -4,6 +4,7 @@ import "./globals.css";
 import { ReactFlowProvider } from "@xyflow/react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { AuthProvider } from "@/components/AuthProvider";
+import Header from "@/components/header/Header";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,11 +31,24 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          <ReactFlowProvider>
-            <AuthGuard>{children}</AuthGuard>
-          </ReactFlowProvider>
-        </AuthProvider>
+        <div className="flex w-full h-screen overflow-y-hidden">
+          <div className="page-wrapper flex w-full">
+            {/* <Sidebar /> */}
+            <div className="body-wrapper flex flex-col w-full bg-primary">
+              <Header layoutType="vertical" />
+              {/* <NavBar /> */}
+              <main className="flex-1 overflow-hidden">
+                <div className="h-full">
+                  <AuthProvider>
+                    <ReactFlowProvider>
+                      <AuthGuard>{children}</AuthGuard>
+                    </ReactFlowProvider>
+                  </AuthProvider>
+                </div>
+              </main>
+            </div>
+          </div>
+        </div>
       </body>
     </html>
   );

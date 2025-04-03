@@ -1,3 +1,4 @@
+"use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
@@ -13,19 +14,28 @@ import {
   LayoutGrid,
   CirclePlus,
 } from "lucide-react";
+import axiosInstance from "@/utils/axios";
+import CollectionTable from "@/components/WorkflowTable";
 
-interface Workflow {
+interface Playbook {
   id: string;
   name: string;
   description: string;
-  parent_id?: string;
-  actions?: { app_name?: string; large_image?: string }[];
-  triggers?: { id: string; name: string }[];
-  schedules?: number;
+  collection_id: string;
+  owner_id: string;
+  playbook_version: any[];
 }
 
+interface Collection {
+  id: string;
+  name: string;
+  description: string;
+  parent_id: string | null;
+  playbook: Playbook[];
+  collection: Collection[];
+}
 export default function WorkflowPage() {
-  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [workflows, setWorkflows] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState("board");
   const [openModal, setOpenModal] = useState(false);
@@ -38,23 +48,22 @@ export default function WorkflowPage() {
   const fetchWorkflows = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/collections");
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
+      const response = await axiosInstance.get("/api/collection");
+      console.log(response);
 
-      // Transform the data to match our Workflow interface
-      const workflowList: Workflow[] = data.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        parent_id: item.parent_id,
-        // Add empty arrays for these properties to avoid undefined errors
-        actions: [],
-        triggers: [],
-        schedules: 0,
-      }));
+      const workflowList: Collection[] = await response.data?.map(
+        (item: any) => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          parent_id: item.parent_id,
+          actions: [],
+          triggers: [],
+          schedules: 0,
+          playbook: item.playbook || [],
+          collection: item.collection || [],
+        })
+      );
 
       setWorkflows(workflowList);
     } catch (error) {
@@ -91,12 +100,12 @@ export default function WorkflowPage() {
 
   return (
     <div className="flex h-screen bg-[#131B2F] text-white">
-      <Sidebar />
+      {/* <Sidebar /> */}
 
       <div className="flex-1 overflow-auto">
         <div className="max-w-screen-xl mx-auto p-9">
           <div>
-            <h1 className="text-[24px] font-bold text-white">Workflows</h1>
+            <h1 className="text-[24px] font-bold text-white">Collections</h1>
           </div>
 
           <div className="py-2"></div>
@@ -163,21 +172,20 @@ export default function WorkflowPage() {
                   <LayoutGrid size={20} />
                 </button>
               </div>
+              <div className="flex items-center justify-between">
+                <div>{/* Tab navigation can be added here if needed */}</div>
+                <button
+                  onClick={() => setOpenModal(true)}
+                  className="bg-[#071026] flex size-10 justify-center items-center rounded-full border-dashed border-[2px] border-[#00F6FF] hover:bg-[#0A162E] transition-colors"
+                >
+                  <CirclePlus color="#00F6FF" />
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Workflow content */}
-          <div className="mt-2">
-            <div className="flex items-center justify-between mb-10">
-              <div>{/* Tab navigation can be added here if needed */}</div>
-              <button
-                onClick={() => setOpenModal(true)}
-                className="bg-[#071026] flex size-10 justify-center items-center rounded-full border-dashed border-[2px] border-[#00F6FF] hover:bg-[#0A162E] transition-colors"
-              >
-                <CirclePlus color="#00F6FF" />
-              </button>
-            </div>
-
+          <div className="mt-8">
             <WorkflowForm
               openModal={openModal}
               setOpenModal={setOpenModal}
@@ -206,8 +214,8 @@ export default function WorkflowPage() {
               </div>
             ) : (
               <div className="mt-2">
-                <WorkflowTable
-                  workflows={workflows}
+                <CollectionTable
+                  collections={workflows}
                   isLoading={loading}
                   setOpenModal={setOpenModal}
                 />

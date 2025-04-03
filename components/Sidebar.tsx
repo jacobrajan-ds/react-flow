@@ -19,7 +19,7 @@ export default function Sidebar() {
           <Zap className="text-[#00F6FF]" size={24} />
         </div>
         {!isCollapsed && (
-          <span className="ml-3 text-xl font-bold text-white">Zapsy</span>
+          <span className="ml-3 text-xl font-bold text-white">Playbook</span>
         )}
       </div>
 
