@@ -1,334 +1,270 @@
-import React, { useState } from "react";
+import React from "react";
 import {
-  Clock,
-  FileText,
-  Plus,
   Folder,
-  FolderOpen,
-  Play,
-  ChevronDown,
+  BookOpen,
+  FileCode,
   ChevronRight,
+  Layers,
+  GitBranch,
+  Box,
 } from "lucide-react";
-import Image from "next/image";
-
-interface Playbook {
-  id: string;
-  name: string;
-  description: string;
-  collection_id: string;
-  owner_id?: string;
-  playbook_version?: any[];
-}
-
-interface Collection {
-  id: string;
-  name: string;
-  description: string;
-  parent_id: string | null;
-  playbook: Playbook[];
-  collection: Collection[];
-  actions?: { app_name?: string; large_image?: string }[];
-  triggers?: { id: string; name: string }[];
-  schedules?: number;
-}
-
-interface BreadcrumbItem {
-  id: string;
-  name: string;
-}
 
 interface WorkflowCardProps {
-  workflow?: Collection | Playbook;
+  workflow?: any;
   isLoading?: boolean;
-  isExpanded?: boolean;
-  onToggleExpand?: (id: string) => void;
-  onPlaybookClick?: (id: string) => void;
-  level?: number;
 }
 
-export default function WorkflowCard({
+const WorkflowCard: React.FC<WorkflowCardProps> = ({
   workflow,
   isLoading = false,
-  isExpanded = false,
-  onToggleExpand,
-  onPlaybookClick,
-  level = 0,
-}: WorkflowCardProps) {
-  const [childrenVisible, setChildrenVisible] = useState(isExpanded);
-
+}) => {
   if (isLoading) {
     return (
-      <div className="bg-[#0A162E] rounded-lg p-6 w-72 border border-gray-800 animate-pulse">
+      <div className="bg-[#071026] border border-[#00F6FF]/30 rounded-xl p-5 w-[280px] h-[180px] animate-pulse shadow-lg shadow-[#00F6FF]/5">
         <div className="flex justify-between items-center mb-4">
-          <div className="h-4 bg-gray-800 w-1/2 rounded"></div>
-          <div className="h-4 bg-gray-800 w-8 rounded"></div>
+          <div className="h-8 w-8 bg-[#0A162E] rounded-md"></div>
+          <div className="h-5 w-16 bg-[#0A162E] rounded-full"></div>
         </div>
-        <div className="h-4 bg-gray-800 w-full rounded mb-6"></div>
-        <div className="flex flex-wrap gap-2 mb-6">
-          <div className="h-4 bg-gray-800 w-20 rounded-full"></div>
-          <div className="h-4 bg-gray-800 w-24 rounded-full"></div>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="flex -space-x-2">
-              <div className="h-8 w-8 bg-gray-800 rounded-full"></div>
-              <div className="h-8 w-8 bg-gray-800 rounded-full"></div>
-            </div>
-            <div className="w-8 h-8 bg-gray-800 rounded-full border border-dashed border-gray-700 ml-2"></div>
-          </div>
+        <div className="h-5 bg-[#0A162E] rounded w-3/4 mb-3"></div>
+        <div className="h-4 bg-[#0A162E] rounded w-full mb-2"></div>
+        <div className="h-4 bg-[#0A162E] rounded w-2/3 mb-4"></div>
+        <div className="flex justify-between">
+          <div className="h-4 w-20 bg-[#0A162E] rounded"></div>
+          <div className="h-4 w-20 bg-[#0A162E] rounded"></div>
         </div>
       </div>
     );
   }
 
-  if (!workflow) return null;
+  // Determine the icon based on item type
+  let icon;
+  let bgColor = "bg-gradient-to-br";
+  let gradientColors = "";
 
-  // Check if this is a playbook by looking for collection_id property
-  const isPlaybook = "collection_id" in workflow;
-
-  // Default values for optional properties
-  const { id, name, description } = workflow;
-
-  // Get actions, triggers, schedules (only if they exist)
-  const actions = workflow.actions || [];
-  const triggers = workflow.triggers || [];
-  const schedules = isPlaybook ? (workflow as any).schedules || 0 : 0;
-
-  // For collections: count child items
-  let childCollections: Collection[] = [];
-  let childPlaybooks: Playbook[] = [];
-
-  if (!isPlaybook) {
-    const collection = workflow as Collection;
-    childCollections = collection.collection || [];
-    childPlaybooks = collection.playbook || [];
+  if (workflow?.type === "collection") {
+    icon = <Folder className="text-white" size={20} />;
+    gradientColors = "from-blue-400 to-cyan-500";
+  } else if (workflow?.type === "playbook") {
+    icon = <BookOpen className="text-white" size={20} />;
+    gradientColors = "from-indigo-400 to-purple-500";
+  } else if (workflow?.type === "playbookVersion") {
+    icon = <FileCode className="text-white" size={20} />;
+    gradientColors = "from-emerald-400 to-teal-500";
   }
 
-  const MAX_VISIBLE_ICONS = 3;
-  const visibleActions = actions.slice(0, MAX_VISIBLE_ICONS);
-  const remainingCount = actions.length - MAX_VISIBLE_ICONS;
+  // Count items within each type
+  const collectionCount = workflow?.collection?.length || 0;
+  const playbookCount = workflow?.playbook?.length || 0;
+  const versionCount = workflow?.playbook_version?.length || 0;
+  const totalItemCount = collectionCount + playbookCount;
 
-  const handleToggleExpand = () => {
-    if (isPlaybook) {
-      onPlaybookClick && onPlaybookClick(id);
-      return;
-    }
-
-    setChildrenVisible(!childrenVisible);
-    onToggleExpand && onToggleExpand(id);
-  };
-
-  const handlePlaybookClick = (playbookId: string) => {
-    onPlaybookClick && onPlaybookClick(playbookId);
-  };
-
-  // Calculate margin for nested collections
-  const leftMargin = level * 16;
+  // Format date for display: 2025-04-04 to Apr 4, 2025
+  const formattedDate = workflow?.created_at
+    ? new Date(workflow.created_at).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "Apr 4, 2025";
 
   return (
-    <div className="mb-2">
-      <div
-        className={`bg-[#0A162E] rounded-lg p-5 cursor-pointer hover:bg-[#131B2F] transition-colors border border-gray-800 ${
-          childrenVisible ? "border-b-0 rounded-b-none" : ""
-        }`}
-        style={{ marginLeft: `${leftMargin}px` }}
-        onClick={handleToggleExpand}
-      >
-        {/* Header with type icon and expand control */}
-        <div className="flex justify-between items-center mb-3">
-          <div className="flex items-center gap-2">
-            {!isPlaybook &&
-            (childCollections.length > 0 || childPlaybooks.length > 0) ? (
-              <button
-                className="text-gray-400 hover:text-white mr-1"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setChildrenVisible(!childrenVisible);
-                  onToggleExpand && onToggleExpand(id);
-                }}
-              >
-                {childrenVisible ? (
-                  <ChevronDown size={16} />
-                ) : (
-                  <ChevronRight size={16} />
-                )}
-              </button>
-            ) : (
-              <div className="w-4 mr-1"></div>
-            )}
+    <div className="bg-[#071026] border border-[#00F6FF]/30 hover:border-[#00F6FF] rounded-xl p-5 w-[280px] h-[180px] flex flex-col cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-[#00F6FF]/20 group relative overflow-hidden">
+      {/* Subtle glow effect on hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#00F6FF]/0 to-[#00F6FF]/0 group-hover:from-[#00F6FF]/5 group-hover:to-[#00F6FF]/10 transition-all duration-500"></div>
 
-            {isPlaybook ? (
-              <Play size={18} className="text-green-500" />
-            ) : childrenVisible ? (
-              <FolderOpen size={18} className="text-yellow-500" />
-            ) : (
-              <Folder size={18} className="text-yellow-500" />
-            )}
-            <h3 className="text-white text-md font-medium">{name}</h3>
-          </div>
-          <button
-            className="text-gray-400 hover:text-gray-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"
-              />
-            </svg>
-          </button>
+      <div className="flex justify-between items-center mb-3">
+        <div
+          className={`${bgColor} ${gradientColors} rounded-md p-2 w-8 h-8 flex items-center justify-center shadow-md`}
+        >
+          {icon}
         </div>
 
-        {/* Description */}
-        <p className="text-gray-400 text-xs mb-3 line-clamp-2">{description}</p>
-
-        {/* Type badge */}
-        <div className="flex flex-wrap gap-2 mb-3">
-          <div
-            className={`px-2 py-1 rounded-full text-xs font-medium ${
-              isPlaybook
-                ? "bg-[#2C5282] text-[#BEE3F8]"
-                : "bg-[#2D3748] text-[#CBD5E0]"
-            }`}
-          >
-            {isPlaybook ? "Playbook" : "Collection"}
-          </div>
-
-          {/* For collections, show child counts */}
-          {!isPlaybook &&
-            (childCollections.length > 0 || childPlaybooks.length > 0) && (
-              <div className="px-2 py-1 rounded-full text-xs font-medium bg-[#1A2E4A] text-gray-300">
-                {childCollections.length + childPlaybooks.length} item
-                {childCollections.length + childPlaybooks.length !== 1
-                  ? "s"
-                  : ""}
-              </div>
-            )}
-        </div>
-
-        {/* Footer content */}
-        <div className="flex items-center justify-between">
-          {isPlaybook ? (
-            /* Playbook Footer - Actions and status */
-            <div className="flex items-center">
-              {actions.length > 0 ? (
-                <>
-                  <div className="flex -space-x-2">
-                    {visibleActions.map((action, index) => (
-                      <div
-                        key={`action-icon-${index}`}
-                        className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center border-2 border-[#0A162E]"
-                      >
-                        {action.large_image ? (
-                          <Image
-                            src={action.large_image}
-                            alt={action.app_name || "Action"}
-                            width={28}
-                            height={28}
-                            className="w-7 h-7 rounded-full"
-                          />
-                        ) : (
-                          <span className="text-xs text-white">
-                            {(action.app_name || "A").charAt(0)}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {remainingCount > 0 && (
-                    <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center border-2 border-[#0A162E] -ml-2 text-white text-xs">
-                      +{remainingCount}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="text-gray-500 text-xs">No actions</div>
-              )}
-            </div>
-          ) : (
-            /* Collection Footer - Item counts */
-            <div className="flex items-center text-gray-400 text-sm">
-              {childCollections.length > 0 && (
-                <span>
-                  {childCollections.length} Folder
-                  {childCollections.length !== 1 ? "s" : ""}
-                </span>
-              )}
-              {childCollections.length > 0 && childPlaybooks.length > 0 && (
-                <span className="mx-1">•</span>
-              )}
-              {childPlaybooks.length > 0 && (
-                <span>
-                  {childPlaybooks.length} Playbook
-                  {childPlaybooks.length !== 1 ? "s" : ""}
-                </span>
-              )}
-              {childCollections.length === 0 && childPlaybooks.length === 0 && (
-                <span>Empty collection</span>
-              )}
-            </div>
+        <div className="flex items-center">
+          {workflow?.type === "collection" && totalItemCount > 0 && (
+            <span className="text-xs font-medium bg-[#0A162E] text-[#00F6FF] px-2 py-1 rounded-full mr-1">
+              {totalItemCount} {totalItemCount === 1 ? "item" : "items"}
+            </span>
           )}
-
-          {/* Status Indicators for playbooks */}
-          {isPlaybook && (
-            <div className="flex items-center gap-4">
-              {triggers?.length > 0 && (
-                <div className="flex items-center gap-1 text-orange-500">
-                  <FileText size={14} />
-                  <span className="text-xs">{triggers.length}</span>
-                </div>
-              )}
-              {schedules > 0 && (
-                <div className="flex items-center gap-1 text-purple-500">
-                  <Clock size={14} />
-                  <span className="text-xs">{schedules}</span>
-                </div>
-              )}
-            </div>
+          {workflow?.type === "playbook" && versionCount > 0 && (
+            <span className="text-xs font-medium bg-[#0A162E] text-[#00F6FF] px-2 py-1 rounded-full mr-1">
+              {versionCount} {versionCount === 1 ? "version" : "versions"}
+            </span>
           )}
+          <ChevronRight
+            size={16}
+            className="text-gray-400 group-hover:text-white transition-colors duration-300"
+          />
         </div>
       </div>
 
-      {/* Child collections and playbooks (if expanded) */}
-      {!isPlaybook && childrenVisible && (
-        <div className="pl-4 border-l border-r border-b border-gray-800 rounded-b-lg bg-[#0F1A2E] mb-4">
-          {/* Child collections */}
-          {childCollections.map((collection) => (
-            <WorkflowCard
-              key={`collection-${collection.id}`}
-              workflow={collection}
-              onToggleExpand={onToggleExpand}
-              onPlaybookClick={onPlaybookClick}
-              level={level + 1}
-            />
-          ))}
+      <h3 className="font-semibold text-lg text-white mb-1 group-hover:text-[#00F6FF] transition-colors duration-300">
+        {workflow?.name}
+      </h3>
+      <p className="text-gray-400 text-sm line-clamp-2 mb-auto">
+        {workflow?.description || "No description provided"}
+      </p>
 
-          {/* Child playbooks */}
-          {childPlaybooks.map((playbook) => (
-            <WorkflowCard
-              key={`playbook-${playbook.id}`}
-              workflow={playbook}
-              onPlaybookClick={onPlaybookClick}
-              level={level + 1}
-            />
-          ))}
+      {/* Status badges for playbook versions */}
+      {workflow?.type === "playbookVersion" &&
+        workflow?.version_info?.is_latest && (
+          <div className="absolute top-3 right-3 bg-[#00F6FF] text-[#071026] text-xs px-2 py-0.5 rounded-full font-medium">
+            Latest
+          </div>
+        )}
 
-          {/* Empty state */}
-          {childCollections.length === 0 && childPlaybooks.length === 0 && (
-            <div className="py-4 text-center text-gray-500 text-sm">
-              This collection is empty
+      {/* Content summary footer - replacing calendar and user info */}
+      <div className="flex justify-between items-center mt-4 text-xs pt-2 border-t border-gray-800">
+        {/* For collections: show breakdown of contained items */}
+        {workflow?.type === "collection" && (
+          <>
+            {collectionCount > 0 && (
+              <div className="flex items-center text-blue-400">
+                <Folder size={14} className="mr-1" />
+                <span>
+                  {collectionCount} Collection{collectionCount !== 1 ? "s" : ""}
+                </span>
+              </div>
+            )}
+            {playbookCount > 0 && (
+              <div className="flex items-center text-purple-400">
+                <BookOpen size={14} className="mr-1" />
+                <span>
+                  {playbookCount} Playbook{playbookCount !== 1 ? "s" : ""}
+                </span>
+              </div>
+            )}
+            {!collectionCount && !playbookCount && (
+              <div className="flex items-center text-gray-500">
+                <Box size={14} className="mr-1" />
+                <span>Empty collection</span>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* For playbooks: show version info */}
+        {workflow?.type === "playbook" && (
+          <>
+            {versionCount > 0 ? (
+              <div className="flex items-center text-teal-400">
+                <GitBranch size={14} className="mr-1" />
+                <span>
+                  {versionCount} Version{versionCount !== 1 ? "s" : ""}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center text-gray-500">
+                <GitBranch size={14} className="mr-1" />
+                <span>No versions</span>
+              </div>
+            )}
+            {/* Show execution mode if available */}
+            {workflow.playbook_version &&
+              workflow.playbook_version[0]?.execution_mode && (
+                <div className="flex items-center text-gray-400">
+                  <FileCode size={14} className="mr-1" />
+                  <span>
+                    {workflow.playbook_version[0].execution_mode} Mode
+                  </span>
+                </div>
+              )}
+          </>
+        )}
+
+        {/* For playbook versions: show version number and mode */}
+        {workflow?.type === "playbookVersion" && workflow?.version_info && (
+          <>
+            <div className="flex items-center text-teal-400">
+              <GitBranch size={14} className="mr-1" />
+              <span>Version {workflow.version_info.version_number}</span>
             </div>
-          )}
+            <div className="flex items-center text-gray-400">
+              <FileCode size={14} className="mr-1" />
+              <span>{workflow.version_info.execution_mode}</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Show contents preview for collections */}
+      {workflow?.type === "collection" &&
+        (collectionCount > 0 || playbookCount > 0) && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#071026] to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs pt-10">
+            <div className="flex flex-wrap gap-1">
+              {/* Collection items previews */}
+              {workflow.collection &&
+                workflow.collection
+                  .slice(0, 2)
+                  .map((col: any, index: number) => (
+                    <div
+                      key={`col-${index}`}
+                      className="bg-[#0A162E] px-2 py-1 rounded flex items-center"
+                    >
+                      <Folder size={12} className="text-blue-400 mr-1" />
+                      <span className="text-gray-300 truncate max-w-[80px]">
+                        {col.name}
+                      </span>
+                    </div>
+                  ))}
+
+              {/* Playbook items previews */}
+              {workflow.playbook &&
+                workflow.playbook.slice(0, 2).map((pb: any, index: number) => (
+                  <div
+                    key={`pb-${index}`}
+                    className="bg-[#0A162E] px-2 py-1 rounded flex items-center"
+                  >
+                    <BookOpen size={12} className="text-purple-400 mr-1" />
+                    <span className="text-gray-300 truncate max-w-[80px]">
+                      {pb.name}
+                    </span>
+                  </div>
+                ))}
+
+              {/* Show count of additional items if there are more */}
+              {totalItemCount > 4 && (
+                <div className="bg-[#0A162E] px-2 py-1 rounded">
+                  <span className="text-gray-400">
+                    +{totalItemCount - 4} more
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+      {/* Show version info for playbooks */}
+      {workflow?.type === "playbook" && versionCount > 0 && (
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#071026] to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs pt-10">
+          <div className="flex flex-wrap gap-1">
+            {workflow.playbook_version &&
+              workflow.playbook_version
+                .slice(0, 3)
+                .map((version: any, index: number) => (
+                  <div
+                    key={`ver-${index}`}
+                    className="bg-[#0A162E] px-2 py-1 rounded flex items-center"
+                  >
+                    <FileCode size={12} className="text-teal-400 mr-1" />
+                    <span className="text-gray-300">
+                      v{version.version_number}
+                    </span>
+                    {version.is_latest && (
+                      <span className="ml-1 text-[#00F6FF]">• latest</span>
+                    )}
+                  </div>
+                ))}
+
+            {versionCount > 3 && (
+              <div className="bg-[#0A162E] px-2 py-1 rounded">
+                <span className="text-gray-400">+{versionCount - 3} more</span>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
-}
+};
+
+export default WorkflowCard;

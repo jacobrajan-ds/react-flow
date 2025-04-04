@@ -1,6 +1,6 @@
 import React from "react";
 import { ChevronRight, Home } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface BreadcrumbItem {
   id: string;
@@ -9,35 +9,37 @@ interface BreadcrumbItem {
 
 interface BreadcrumbProps {
   items: BreadcrumbItem[];
-  onNavigate: (id: string) => void;
+  onNavigate: (item: BreadcrumbItem | null, index: number) => void;
 }
 
 export default function Breadcrumb({ items, onNavigate }: BreadcrumbProps) {
   return (
-    <div className="flex items-center text-sm text-gray-400 mb-4 overflow-x-auto">
+    <nav className="flex items-center space-x-1 text-sm text-gray-400 mb-4">
       <button
-        onClick={() => onNavigate("")}
-        className="flex items-center hover:text-white"
+        onClick={() => onNavigate(null, -1)}
+        className="flex items-center hover:text-white transition-colors"
       >
-        <Home size={16} className="mr-1" />
-        <span>Home</span>
+        <Home size={16} />
+        <span className="ml-1">Home</span>
       </button>
+
+      {items.length > 0 && <ChevronRight size={14} className="text-gray-600" />}
 
       {items.map((item, index) => (
         <React.Fragment key={item.id}>
-          <ChevronRight size={16} className="mx-2" />
           <button
-            onClick={() => onNavigate(item.id)}
-            className={`${
-              index === items.length - 1
-                ? "text-white font-medium"
-                : "hover:text-white"
+            onClick={() => onNavigate(item, index)}
+            className={`hover:text-white transition-colors ${
+              index === items.length - 1 ? "text-white font-medium" : ""
             }`}
           >
             {item.name}
           </button>
+          {index < items.length - 1 && (
+            <ChevronRight size={14} className="text-gray-600" />
+          )}
         </React.Fragment>
       ))}
-    </div>
+    </nav>
   );
 }
