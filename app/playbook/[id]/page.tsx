@@ -201,24 +201,33 @@ function PlaybookContent() {
           console.log(playbookData);
           setPlaybook(playbookData);
 
-          // Determine which version to load
-          let version;
-          if (versionId) {
-            // Load specific version if provided in query params
-            version = playbookData.playbook_version.find(
-              (v) => v.id === versionId
-            );
-          } else {
-            // Otherwise load the latest version
-            version = playbookData.playbook_version.find((v) => v.is_latest);
-          }
+          // Get the version data directly from the response
+          const version = playbookData;
 
           if (version) {
             setActiveVersion(version);
 
             // Transform nodes and edges for ReactFlow
-            const transformedNodes = version.playbook_node_version.map(
-              (node) => ({
+            const transformedNodes = version.nodes.map((node) => {
+              const nodeTypeConfig = availableNodeTypes.find(
+                (type) => type.name === node.type
+              );
+
+              const initialValues = (
+                nodeTypeConfig?.config_schema?.fields || []
+              ).reduce((acc: any, field: any) => {
+                if (
+                  field.type === "choice" &&
+                  !node.data.values?.[field.name]
+                ) {
+                  acc[field.name] = field.options[0] || null;
+                } else {
+                  acc[field.name] = node.data.values?.[field.name] || null;
+                }
+                return acc;
+              }, {});
+
+              return {
                 ...node,
                 // Ensure required properties for ReactFlow nodes
                 id: node.id,
@@ -227,15 +236,13 @@ function PlaybookContent() {
                 position: node.position || { x: 0, y: 0 },
                 data: {
                   ...node.data,
-                  nodeInfo: node.data.nodeInfo || {
-                    app_type: node.data.app_type || "PROCESS",
-                    name: node.data.label || "Node",
-                  },
+                  config: nodeTypeConfig?.config_schema?.fields || [],
+                  values: initialValues, // Ensure values structure is present
                 },
-              })
-            );
+              };
+            });
 
-            const transformedEdges = version.edge.map((edge) => ({
+            const transformedEdges = version.edges.map((edge) => ({
               ...edge,
               // Ensure required properties for ReactFlow edges
               id: edge.id,
@@ -270,9 +277,8 @@ function PlaybookContent() {
     }
 
     loadPlaybook();
-  }, [playbookId, versionId]);
+  }, [playbookId, versionId, availableNodeTypes]);
 
-  // Handle node selection
   const onNodeClick: NodeMouseHandler = useCallback((_, node) => {
     setSelectedNode(node as PlaybookNode);
   }, []);
@@ -299,8 +305,6 @@ function PlaybookContent() {
   const onPaneClick = useCallback(() => {
     setSelectedNode(null);
   }, []);
-
-  // Handle node configuration changes
   const handleNodeDataChange = useCallback(
     (updatedData: any) => {
       if (!selectedNode) return;
@@ -312,7 +316,10 @@ function PlaybookContent() {
               ...node,
               data: {
                 ...node.data,
-                ...updatedData,
+                values: {
+                  ...node.data.values,
+                  ...updatedData.values,
+                },
               },
             };
           }
@@ -390,8 +397,6 @@ function PlaybookContent() {
           config: nodeInfo.config_schema?.fields || [],
           // Initialize with empty values
           values: {},
-          // Store the original node info for reference
-          nodeInfo: nodeInfo,
         };
 
         const newNode = {
@@ -428,15 +433,7 @@ function PlaybookContent() {
         data: {
           label: node.data.label,
           description: node.data.description,
-          // Include node configuration values
-          ...node.data.values,
-          // Include nodeInfo for reference but remove code field to reduce payload size
-          nodeInfo: node.data.nodeInfo
-            ? {
-                ...node.data.nodeInfo,
-                code: undefined, // Remove code to reduce payload size
-              }
-            : undefined,
+          ...node.data.values, // Include only entered node configuration values
         },
       }));
 
@@ -460,7 +457,7 @@ function PlaybookContent() {
 
       // Send the API request
       const response = await axiosInstance.patch(
-        `/api/playbook-version/${activeVersion.id}`,
+        `/api/playbook/save-playbook/${activeVersion.id}`,
         payload
       );
 
