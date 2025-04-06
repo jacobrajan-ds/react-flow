@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import axiosInstance from "@/utils/axios";
 import { Play } from "lucide-react";
+import Link from "next/link";
 
 // Types (same as before)
 interface PlaybookVersion {
@@ -285,6 +286,7 @@ export default function WorkflowTable({
     [expandedRows]
   );
 
+  // In your processItems function
   const processItems = useCallback((items: any[]): WorkflowItem[] => {
     console.log("Processing items:", items);
 
@@ -332,19 +334,51 @@ export default function WorkflowTable({
         const processedCollections = hasCollections
           ? processItems(itemCollection)
           : [];
-        const processedPlaybooks = hasPlaybooks
-          ? itemPlaybook.map((p: any) => ({
-              id: p.id,
-              name: p.name || "Unnamed Playbook",
-              description: p.description || "",
+
+        // Process playbooks and their versions
+        const processedPlaybooks = [];
+        if (hasPlaybooks) {
+          for (const playbook of itemPlaybook) {
+            // Create the playbook item
+            const playbookItem: WorkflowItem = {
+              id: playbook.id,
+              name: playbook.name || "Unnamed Playbook",
+              description: playbook.description || "",
               type: "playbook" as const,
               parent_id: item.id,
               level: 0,
-              hasChildren: false,
+              hasChildren:
+                Array.isArray(playbook.playbook_version) &&
+                playbook.playbook_version.length > 0,
               children: [],
-              metadata: p,
-            }))
-          : [];
+              metadata: playbook,
+            };
+
+            // Process playbook versions if they exist
+            if (
+              Array.isArray(playbook.playbook_version) &&
+              playbook.playbook_version.length > 0
+            ) {
+              playbookItem.children = playbook.playbook_version.map(
+                (version) => ({
+                  id: version.id,
+                  name: `Version ${
+                    version.version || version.version_number || "1.0.0"
+                  }`,
+                  description: version.execution_mode || "",
+                  type: "playbookVersion" as const,
+                  parent_id: playbook.id,
+                  level: 0,
+                  hasChildren: false,
+                  children: [],
+                  metadata: version,
+                })
+              );
+            }
+
+            processedPlaybooks.push(playbookItem);
+          }
+        }
 
         // Combine collections and playbooks as children
         const children = [...processedCollections, ...processedPlaybooks];
@@ -355,7 +389,7 @@ export default function WorkflowTable({
           name: item.name || "Unnamed",
           description: item.description || "",
           type: "collection",
-          parent_id: item.parent_id || null,
+          parent_id: item.parent || item.parent_id || null,
           level: 0,
           hasChildren,
           children,
@@ -401,6 +435,10 @@ export default function WorkflowTable({
           item.children &&
           item.children.length > 0
         ) {
+          console.log(
+            `Row ${item.id} is expanded, has ${item.children.length} children`
+          );
+
           const childrenWithUpdatedLevel = item.children.map((child) => ({
             ...child,
             level: level + 1,
@@ -469,8 +507,7 @@ export default function WorkflowTable({
           const row = info.row.original;
           const paddingLeft = row.level * 24;
 
-          // Always show chevrons for collections, regardless of detected children
-          const shouldShowChevron = row.type === "collection";
+          const shouldShowChevron = row.hasChildren === true;
 
           return (
             <div
@@ -482,7 +519,7 @@ export default function WorkflowTable({
                 }
               }}
             >
-              {/* Show toggle button for collections */}
+              {/* Show toggle button for items with children */}
               {shouldShowChevron ? (
                 <div
                   onClick={(e) => {
@@ -504,7 +541,7 @@ export default function WorkflowTable({
                 <div className="w-[34px] mr-2"></div>
               )}
 
-              {/* Rest of your row rendering */}
+              {/* Display appropriate icon and name based on type */}
               <div className="flex items-center gap-2">
                 {row.type === "collection" ? (
                   <div className="flex items-center">
@@ -519,6 +556,17 @@ export default function WorkflowTable({
                   <div className="flex items-center">
                     <Play size={16} className="text-green-500" />
                     <span className="ml-2 text-white">{row.name}</span>
+                  </div>
+                ) : row.type === "playbookVersion" ? (
+                  <div className="flex items-center">
+                    <FileCode size={16} className="text-teal-500" />
+                    <Link
+                      href={`/playbook/${row.id}`}
+                      className="ml-2 text-white hover:text-blue-400"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {row.name}
+                    </Link>
                   </div>
                 ) : (
                   <div className="flex items-center">
@@ -627,25 +675,7 @@ export default function WorkflowTable({
         },
         size: 250,
       }),
-      columnHelper.display({
-        id: "metadata",
-        header: "Created",
-        cell: ({ row }) => {
-          return (
-            <div className="flex items-center text-xs text-gray-400 gap-4">
-              <div className="flex items-center">
-                <Clock size={12} className="mr-1" />
-                <span>{currentDate}</span>
-              </div>
-              <div className="flex items-center">
-                <User size={12} className="mr-1" />
-                <span>{currentUser}</span>
-              </div>
-            </div>
-          );
-        },
-        size: 240,
-      }),
+
       columnHelper.display({
         id: "actions",
         header: "",
@@ -671,17 +701,6 @@ export default function WorkflowTable({
                   {/* Collection actions */}
                   {data.type === "collection" && (
                     <>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onItemClick) onItemClick(data);
-                        }}
-                        className="hover:bg-gray-700 rounded-md px-2 py-1.5 cursor-pointer flex items-center gap-2"
-                      >
-                        <Folder size={16} className="text-blue-400" />
-                        View Collection
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-gray-700 my-1" />
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();

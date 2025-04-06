@@ -408,6 +408,19 @@ export default function WorkflowPage() {
     setCardItems(displayItems);
   };
 
+  const handleOpenDialog = (
+    type: "collection" | "playbook" | "playbookVersion",
+    parentId: string
+  ) => {
+    console.log(`Open dialog for ${type} under parent ID: ${parentId}`);
+    // Implement dialog opening logic here
+  };
+
+  const handleItemClick = (item: any) => {
+    console.log("View playbook:", item);
+    // Implement navigation or other logic here
+  };
+
   // Utility functions for finding collections and playbooks
   const findCollectionById = (
     collections: Collection[],
@@ -457,7 +470,7 @@ export default function WorkflowPage() {
       navigateToPlaybook(item.id);
     } else if (item.type === "playbookVersion") {
       // Navigate to playbook version - redirect to a different page
-      router.push(`/workflow/${item.parent_id}`);
+      router.push(`/playbook/${item.parent_id}`);
     }
   };
 
@@ -480,6 +493,8 @@ export default function WorkflowPage() {
     fetchWorkflows();
     setOpenModal(false);
   };
+
+  console.log(tableItems);
 
   return (
     <div className="flex h-screen bg-[#131B2F] text-white">
@@ -637,7 +652,11 @@ export default function WorkflowPage() {
                           key={item.id}
                           onClick={() => handleCardClick(item)}
                         >
-                          <WorkflowCard workflow={item} />
+                          <WorkflowCard
+                            workflow={item}
+                            handleOpenDialog={handleOpenDialog}
+                            onItemClick={handleItemClick}
+                          />
                         </div>
                       ))}
 
@@ -651,7 +670,7 @@ export default function WorkflowPage() {
             ) : (
               <div className="mt-2">
                 <WorkflowTable
-                  collections={tableItems}
+                  collections={allWorkflows}
                   isLoading={loading}
                   setOpenModal={setOpenModal}
                   onItemClick={handleTableItemClick}

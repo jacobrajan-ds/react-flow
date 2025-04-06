@@ -107,9 +107,10 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
       {/* Status badges for playbook versions */}
       {workflow?.type === "playbookVersion" &&
         workflow?.version_info?.is_latest && (
-          <div className="absolute top-3 right-3 bg-[#00F6FF] text-[#071026] text-xs px-2 py-0.5 rounded-full font-medium">
-            Latest
-          </div>
+          // <div className="absolute top-3 right-3 bg-[#00F6FF] text-[#071026] text-xs px-2 py-0.5 rounded-full font-medium">
+          //   Latest
+          // </div>
+          <></>
         )}
 
       {/* Content summary footer - replacing calendar and user info */}

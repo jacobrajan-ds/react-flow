@@ -8,6 +8,7 @@ import Link from "next/link";
 // import { FETCH_PROFILE } from "@/app/config/api-url";
 import axiosInstance from "@/utils/axios";
 import NavBar from "../NavBar/NavBar";
+import { usePathname } from "next/navigation";
 
 interface HeaderPropsType {
   layoutType: string;
@@ -19,6 +20,9 @@ interface User {
 }
 
 const Header = ({ layoutType }: HeaderPropsType) => {
+  const pathname = usePathname();
+  const isPlaybookDetailPage = pathname?.startsWith("/playbook/");
+
   const [isSticky, setIsSticky] = useState(false);
   const [user, setUser] = useState<User | undefined>();
   const [userProfileId, setUserProfileId] = useState<string | null>(null);
@@ -90,7 +94,7 @@ const Header = ({ layoutType }: HeaderPropsType) => {
             </div>
           </div> */}
         </div>
-        <NavBar />
+        {!isPlaybookDetailPage && <NavBar />}
       </header>
     </>
   );

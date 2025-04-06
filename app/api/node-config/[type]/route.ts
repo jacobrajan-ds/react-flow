@@ -4,33 +4,40 @@ import { NodeConfigSchema } from "@/app/types/flow";
 const nodeConfigs: Record<string, NodeConfigSchema> = {
   httpIn: {
     defaultLabel: "HTTP In",
-    fields: [
+    action: [
       {
-        id: "label",
-        label: "Name",
-        type: "text",
-        defaultValue: "HTTP In",
-        required: true,
-      },
-      {
-        id: "method",
-        label: "Method",
+        id: "action",
+        label: "Action",
         type: "select",
-        defaultValue: "GET",
-        options: [
-          { value: "GET", label: "GET" },
-          { value: "POST", label: "POST" },
-          { value: "PUT", label: "PUT" },
-          { value: "DELETE", label: "DELETE" },
+        fields: [
+          {
+            id: "label",
+            label: "Name",
+            type: "text",
+            defaultValue: "HTTP In",
+            required: true,
+          },
+          {
+            id: "method",
+            label: "Method",
+            type: "select",
+            defaultValue: "GET",
+            options: [
+              { value: "GET", label: "GET" },
+              { value: "POST", label: "POST" },
+              { value: "PUT", label: "PUT" },
+              { value: "DELETE", label: "DELETE" },
+            ],
+            required: true,
+          },
+          {
+            id: "url",
+            label: "URL",
+            type: "text",
+            defaultValue: "/api",
+            required: true,
+          },
         ],
-        required: true,
-      },
-      {
-        id: "url",
-        label: "URL",
-        type: "text",
-        defaultValue: "/api",
-        required: true,
       },
     ],
   },
