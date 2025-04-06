@@ -76,7 +76,7 @@ interface DisplayItem {
 export default function WorkflowPage() {
   const [allWorkflows, setAllWorkflows] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState("board");
+  const [currentView, setCurrentView] = useState("list");
   const [openModal, setOpenModal] = useState(false);
   const router = useRouter();
 
@@ -514,23 +514,12 @@ export default function WorkflowPage() {
               <div className="relative bg-[#0A162E] rounded-lg p-1 shadow-inner shadow-black/20 w-52">
                 <div
                   className={`absolute h-[85%] top-[7.5%] rounded-lg bg-gradient-to-r from-[#00F6FF] to-[#61DDFF] transition-all duration-300 ease-in-out ${
-                    currentView === "board"
+                    currentView === "list"
                       ? "left-[2%] w-[48%]"
                       : "left-[50%] w-[48%]"
                   }`}
                 />
                 <div className="relative z-10 flex justify-between">
-                  <button
-                    onClick={() => setCurrentView("board")}
-                    className={`flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-sm font-medium transition-colors duration-300 w-24 ${
-                      currentView === "board"
-                        ? "text-[#071026]"
-                        : "text-gray-400 hover:text-gray-300"
-                    }`}
-                  >
-                    <Grid size={16} />
-                    <span>Board</span>
-                  </button>
                   <button
                     onClick={() => setCurrentView("list")}
                     className={`flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-sm font-medium transition-colors duration-300 w-24 ${
@@ -541,6 +530,17 @@ export default function WorkflowPage() {
                   >
                     <List size={16} />
                     <span>List</span>
+                  </button>
+                  <button
+                    onClick={() => setCurrentView("board")}
+                    className={`flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-sm font-medium transition-colors duration-300 w-24 ${
+                      currentView === "board"
+                        ? "text-[#071026]"
+                        : "text-gray-400 hover:text-gray-300"
+                    }`}
+                  >
+                    <Grid size={16} />
+                    <span>Board</span>
                   </button>
                 </div>
               </div>

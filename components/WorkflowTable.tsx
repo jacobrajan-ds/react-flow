@@ -819,12 +819,6 @@ export default function WorkflowTable({
     );
   }
 
-  // Debug log to check processed data structure
-  useEffect(() => {
-    console.log("Processed data for table:", processedData);
-    console.log("Expanded rows:", expandedRows);
-  }, [processedData, expandedRows]);
-
   return (
     <div className="bg-gradient-to-b from-[#0A162E] to-[#131B2F] rounded-xl shadow-lg border border-[#00F6FF]/10 overflow-hidden">
       {/* Dialog for creating new items */}

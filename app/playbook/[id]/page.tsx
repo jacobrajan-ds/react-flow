@@ -17,6 +17,8 @@ import {
   Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { v4 as uuidv4 } from "uuid";
+
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import axiosInstance from "@/utils/axios";
 import {
@@ -116,9 +118,8 @@ interface NodeTypeConfig {
   is_active: boolean;
 }
 
-// Helper function to generate unique IDs
 const generateUniqueId = () => {
-  return `node-${Math.random().toString(36).substr(2, 9)}`;
+  return `node-${uuidv4()}`;
 };
 
 export default function PlaybookPage() {
@@ -186,99 +187,159 @@ function PlaybookContent() {
   }, []);
 
   // Load playbook data
-  useEffect(() => {
-    async function loadPlaybook() {
-      if (!playbookId) return;
+  // Inside the loadPlaybook function
+  async function loadPlaybook() {
+    if (!playbookId) return;
 
-      setIsTransitioning(true);
-      try {
-        const response = await axiosInstance.get(
-          `/api/playbook-version/${playbookId}`
-        );
-        if (response.status === 200) {
-          const playbookData = response.data;
+    setIsTransitioning(true);
+    try {
+      // First, ensure the node types are loaded
+      let nodeTypesData = availableNodeTypes;
+      if (availableNodeTypes.length === 0) {
+        const nodeTypesResponse = await axiosInstance.get("/api/app");
+        if (nodeTypesResponse.status === 200) {
+          nodeTypesData = nodeTypesResponse.data;
+          setAvailableNodeTypes(nodeTypesData);
+        }
+      }
 
-          console.log(playbookData);
-          setPlaybook(playbookData);
+      const response = await axiosInstance.get(
+        `/api/playbook-version/${playbookId}`
+      );
 
-          // Get the version data directly from the response
-          const version = playbookData;
+      if (response.status === 200) {
+        const playbookData = response.data;
+        console.log("Loaded playbook data:", playbookData);
+        setPlaybook(playbookData);
 
-          if (version) {
-            setActiveVersion(version);
+        // Get the version data directly from the response
+        const version = playbookData;
 
-            // Transform nodes and edges for ReactFlow
-            const transformedNodes = version.nodes.map((node) => {
-              const nodeTypeConfig = availableNodeTypes.find(
-                (type) => type.name === node.type
+        if (version) {
+          setActiveVersion(version);
+
+          // Transform nodes and edges for ReactFlow
+          const transformedNodes = version.nodes.map((node) => {
+            // Extract the node type name from the label
+            const nodeTypeName = node.data?.label;
+
+            console.log(`Processing node: ${node.id}, type: ${nodeTypeName}`);
+
+            // Find the corresponding node type config from available node types
+            const nodeTypeConfig = nodeTypesData.find(
+              (type) => type.name === nodeTypeName
+            );
+
+            if (!nodeTypeConfig) {
+              console.warn(
+                `No node type configuration found for: ${nodeTypeName}`
               );
+            } else {
+              console.log(`Found configuration for node type ${nodeTypeName}`);
+            }
 
-              const initialValues = (
-                nodeTypeConfig?.config_schema?.fields || []
-              ).reduce((acc: any, field: any) => {
-                if (
-                  field.type === "choice" &&
-                  !node.data.values?.[field.name]
-                ) {
-                  acc[field.name] = field.options[0] || null;
-                } else {
-                  acc[field.name] = node.data.values?.[field.name] || null;
+            // Get the field definitions from the node type configuration
+            const fieldDefinitions =
+              nodeTypeConfig?.config_schema?.fields || [];
+
+            // Extract existing field values from node data
+            // Fields that are not 'label' or 'description' are considered values
+            const existingValues = {};
+
+            // Copy all fields from node.data that aren't metadata
+            if (node.data) {
+              Object.keys(node.data).forEach((key) => {
+                if (key !== "label" && key !== "description") {
+                  existingValues[key] = node.data[key];
                 }
-                return acc;
-              }, {});
+              });
+            }
 
-              return {
-                ...node,
-                // Ensure required properties for ReactFlow nodes
-                id: node.id,
-                // Use the dynamic node type for all nodes
-                type: "dynamicNode",
-                position: node.position || { x: 0, y: 0 },
-                data: {
-                  ...node.data,
-                  config: nodeTypeConfig?.config_schema?.fields || [],
-                  values: initialValues, // Ensure values structure is present
-                },
-              };
-            });
+            console.log(`Node ${node.id} existing values:`, existingValues);
 
-            const transformedEdges = version.edges.map((edge) => ({
-              ...edge,
-              // Ensure required properties for ReactFlow edges
-              id: edge.id,
-              source: edge.source,
-              target: edge.target,
-              sourceHandle: edge.sourceHandle,
-              targetHandle: edge.targetHandle,
-            }));
+            // Prepare node data with configuration
+            const nodeData = {
+              // Base node data
+              label: node.data?.label || "",
+              description:
+                node.data?.description ||
+                nodeTypeConfig?.config_schema?.description ||
+                "",
 
-            setTimeout(() => {
-              setNodes(transformedNodes);
-              setEdges(transformedEdges);
-              setIsTransitioning(false);
-              setIsLoading(false);
-            }, 100);
-          } else {
-            // No version found
-            console.warn("No version found for this playbook");
+              // Add the configuration fields
+              config: fieldDefinitions,
+
+              // Add a ready-to-use values object
+              values: existingValues,
+
+              // Store the full node type info for reference if needed
+              nodeTypeInfo: nodeTypeConfig,
+            };
+
+            // If there are field definitions but no values yet, initialize with defaults
+            if (fieldDefinitions.length > 0) {
+              fieldDefinitions.forEach((field) => {
+                // Only set default if not already set
+                if (nodeData.values[field.name] === undefined) {
+                  if (field.type === "choice" && field.options?.length) {
+                    nodeData.values[field.name] = field.options[0];
+                  } else if (field.default !== undefined) {
+                    nodeData.values[field.name] = field.default;
+                  }
+                }
+              });
+            }
+
+            return {
+              ...node,
+              id: node.id,
+              type: "dynamicNode",
+              position: node.position || { x: 0, y: 0 },
+              data: nodeData,
+            };
+          });
+
+          const transformedEdges = version.edges.map((edge) => ({
+            ...edge,
+            id: edge.id,
+            source: edge.source,
+            target: edge.target,
+            sourceHandle: edge.sourceHandle,
+            targetHandle: edge.targetHandle,
+          }));
+
+          // Log a sample transformed node for debugging
+          if (transformedNodes.length > 0) {
+            console.log("Sample transformed node:", transformedNodes[0]);
+          }
+
+          setTimeout(() => {
+            setNodes(transformedNodes);
+            setEdges(transformedEdges);
             setIsTransitioning(false);
             setIsLoading(false);
-          }
+          }, 100);
         } else {
-          console.error("Error loading playbook:", response.statusText);
+          // No version found
+          console.warn("No version found for this playbook");
           setIsTransitioning(false);
           setIsLoading(false);
         }
-      } catch (error) {
-        console.error("Error loading playbook:", error);
+      } else {
+        console.error("Error loading playbook:", response.statusText);
         setIsTransitioning(false);
         setIsLoading(false);
       }
+    } catch (error) {
+      console.error("Error loading playbook:", error);
+      setIsTransitioning(false);
+      setIsLoading(false);
     }
+  }
 
+  useEffect(() => {
     loadPlaybook();
-  }, [playbookId, versionId, availableNodeTypes]);
-
+  }, [playbookId]);
   const onNodeClick: NodeMouseHandler = useCallback((_, node) => {
     setSelectedNode(node as PlaybookNode);
   }, []);
@@ -305,6 +366,7 @@ function PlaybookContent() {
   const onPaneClick = useCallback(() => {
     setSelectedNode(null);
   }, []);
+
   const handleNodeDataChange = useCallback(
     (updatedData: any) => {
       if (!selectedNode) return;
@@ -522,7 +584,7 @@ function PlaybookContent() {
 
   // Handle going back to workflows page
   const handleBackToWorkflows = () => {
-    router.push("/workflows");
+    router.push("/");
   };
 
   // Render loading state

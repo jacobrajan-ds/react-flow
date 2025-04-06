@@ -1,114 +1,76 @@
-import React, { FC } from "react";
+import React, { memo } from "react";
 import { Handle, Position, NodeProps } from "@xyflow/react";
 
-interface DynamicNodeData {
-  label: string;
-  description: string;
-  nodeInfo: {
-    app_type: string;
-    name: string;
-    group: string;
-    category: string;
-    [key: string]: any;
-  };
-  [key: string]: any;
-}
+const DynamicNode = memo(({ data, isConnectable, selected }: NodeProps) => {
+  // Check if node has values configured
+  const hasValues = data.values && Object.keys(data.values).length > 0;
 
-const DynamicNode: FC<NodeProps<DynamicNodeData>> = ({ data, selected }) => {
-  // Determine node styling based on app_type
-  const getNodeStyle = () => {
-    const baseStyle = "border p-2 rounded-md w-48 shadow-lg";
+  // Filter out internal properties for display
+  const displayValues = hasValues
+    ? Object.entries(data.values)
+        .filter(([key]) => key !== "label" && key !== "description")
+        .map(([key, value]) => ({ key, value }))
+    : [];
 
-    switch (data.nodeInfo?.app_type) {
-      case "START":
-        return `${baseStyle} bg-[#12362B] border-green-500`;
-      case "PROCESS":
-        return `${baseStyle} bg-[#071026] border-[#00F6FF]/60`;
-      case "END":
-        return `${baseStyle} bg-[#3A1A1A] border-red-500`;
-      default:
-        return `${baseStyle} bg-[#071026] border-gray-600`;
-    }
-  };
-
-  // Determine handle colors based on app_type
-  const getHandleColor = () => {
-    switch (data.nodeInfo?.app_type) {
-      case "START":
-        return "#4ade80"; // green
-      case "PROCESS":
-        return "#00F6FF"; // cyan
-      case "END":
-        return "#ef4444"; // red
-      default:
-        return "#93c5fd"; // blue
-    }
-  };
-
-  // Get an icon based on the node type or group
-  const getNodeIcon = () => {
-    const group = data.nodeInfo?.group?.toLowerCase() || "";
-
-    if (group.includes("communication")) {
-      return "📧"; // Email/Communication
-    } else if (group.includes("input")) {
-      return "📥"; // Input
-    } else if (group.includes("output")) {
-      return "📤"; // Output
-    } else if (group.includes("process")) {
-      return "⚙️"; // Process
-    } else if (group.includes("data")) {
-      return "💾"; // Data
-    } else if (data.nodeInfo?.app_type === "START") {
-      return "🚀"; // Start
-    } else if (data.nodeInfo?.app_type === "END") {
-      return "🏁"; // End
-    }
-
-    return "📝"; // Default
-  };
-
-  // Determine if this node should have input handles
-  const hasInputHandle = data.nodeInfo?.app_type !== "START";
-
-  // Determine if this node should have output handles
-  const hasOutputHandle = data.nodeInfo?.app_type !== "END";
+  // Count configured values
+  const configuredCount = displayValues.length;
 
   return (
-    <div className={`${getNodeStyle()} ${selected ? "ring-2 ring-white" : ""}`}>
-      <div className="flex items-center gap-2 mb-1">
-        <div className="text-xl">{getNodeIcon()}</div>
-        <div className="font-bold text-white overflow-hidden text-ellipsis">
-          {data.label || "Node"}
+    <div
+      className={`rounded-md bg-[#0a253f] border ${
+        selected ? "border-[#00F6FF]" : "border-[#00F6FF]/30"
+      } 
+                 text-white p-2 min-w-[150px] ${
+                   selected ? "shadow-lg shadow-[#00F6FF]/20" : ""
+                 }`}
+    >
+      {/* Node header */}
+      <div className="font-medium text-[#00F6FF] mb-1">{data.label}</div>
+
+      {/* Description - only show 2 lines max */}
+      {data.description && (
+        <div className="text-xs text-gray-300 mb-2 line-clamp-2">
+          {data.description}
         </div>
-      </div>
-      <div className="text-xs text-gray-300 overflow-hidden">
-        {data.description || data.nodeInfo?.config_schema?.description || ""}
-      </div>
-
-      {/* Input Handle */}
-      {hasInputHandle && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="input"
-          className="!w-2 !h-2"
-          style={{ background: getHandleColor() }}
-        />
       )}
 
-      {/* Output Handle */}
-      {hasOutputHandle && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="output"
-          className="!w-2 !h-2"
-          style={{ background: getHandleColor() }}
-        />
+      {/* Configuration summary */}
+      {configuredCount > 0 ? (
+        <div className="text-xs bg-[#071026] p-1 rounded mt-1 text-gray-400 max-h-16 overflow-auto">
+          {displayValues.slice(0, 2).map(({ key, value }) => (
+            <div key={key} className="truncate">
+              <span className="text-[#00F6FF]/70">{key}:</span> {String(value)}
+            </div>
+          ))}
+          {configuredCount > 2 && (
+            <div className="text-gray-500 italic text-xs mt-1">
+              +{configuredCount - 2} more...
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="text-xs bg-[#071026] p-1 rounded mt-1 text-gray-500 italic">
+          Click to configure
+        </div>
       )}
+
+      {/* Handles for connections */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="input"
+        style={{ background: "#00F6FF" }}
+        isConnectable={isConnectable}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="output"
+        style={{ background: "#00F6FF" }}
+        isConnectable={isConnectable}
+      />
     </div>
   );
-};
+});
 
 export default DynamicNode;

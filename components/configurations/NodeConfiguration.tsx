@@ -9,42 +9,54 @@ const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
   node,
   onChange,
 }) => {
-  const [localValues, setLocalValues] = useState(node?.data?.values || {});
+  const [localValues, setLocalValues] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log("Node structure:", node);
+    // Reset state when node changes
+    setLoading(true);
 
-    // Find configuration schema wherever it might be
-    const configFields =
-      node?.data?.config || node?.data?.nodeInfo?.config_schema?.fields || [];
+    // Log the node for debugging
+    console.log("Node in configuration:", node);
 
-    if (!configFields || configFields.length === 0) {
-      console.warn("Node configuration schema is missing or invalid:", node);
-      setLocalValues({});
+    if (!node?.data) {
+      console.warn("Node data is missing");
+      setLoading(false);
       return;
     }
 
-    let initialValues: any = {};
+    // Initialize with existing values
+    const initialValues = { ...(node.data.values || {}) };
 
-    // Handle array format (fields)
-    if (Array.isArray(configFields)) {
-      initialValues = configFields.reduce((acc: any, field: any) => {
-        acc[field.name] = node.data.values?.[field.name] ?? field.default ?? "";
-        return acc;
-      }, {});
-    }
-    // Handle properties format
-    else if (configFields.properties) {
-      initialValues = Object.entries(configFields.properties).reduce(
-        (acc: any, [key, value]: [string, any]) => {
-          acc[key] = node.data.values?.[key] ?? value.default ?? "";
-          return acc;
-        },
-        {}
-      );
+    // If config fields exist, make sure all fields have a value (use defaults if needed)
+    if (Array.isArray(node.data.config)) {
+      node.data.config.forEach((field: any) => {
+        if (initialValues[field.name] === undefined) {
+          if (
+            field.type === "choice" &&
+            Array.isArray(field.options) &&
+            field.options.length > 0
+          ) {
+            initialValues[field.name] = field.options[0];
+          } else if (field.default !== undefined) {
+            initialValues[field.name] = field.default;
+          } else {
+            // Set appropriate default based on type
+            if (field.type === "boolean") {
+              initialValues[field.name] = false;
+            } else if (field.type === "string") {
+              initialValues[field.name] = "";
+            } else {
+              initialValues[field.name] = null;
+            }
+          }
+        }
+      });
     }
 
+    console.log("Initial field values:", initialValues);
     setLocalValues(initialValues);
+    setLoading(false);
   }, [node]);
 
   // Handle input change
@@ -53,31 +65,59 @@ const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
       ...localValues,
       [fieldName]: value,
     };
+    console.log(`Setting ${fieldName} to:`, value);
     setLocalValues(updatedValues);
     onChange({ values: updatedValues });
   };
 
-  // Render configuration fields
-  const renderFields = () => {
-    // Try to find config fields in various possible locations
-    const configFields =
-      node?.data?.config || node?.data?.nodeInfo?.config_schema?.fields || [];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-pulse text-[#00F6FF]">
+          Loading configuration...
+        </div>
+      </div>
+    );
+  }
 
-    // If config is in array format (fields)
-    if (Array.isArray(configFields) && configFields.length > 0) {
-      return configFields.map((field: any) => (
-        <div key={field.name} className="space-y-1">
-          <label className="text-sm font-medium">
+  // Check if there are config fields
+  if (!node?.data?.config || node.data.config.length === 0) {
+    return (
+      <div className="p-4 text-gray-400">
+        <p className="mb-2">
+          No configuration options available for this node.
+        </p>
+        <p className="text-sm">Node type: {node?.data?.label || node?.type}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Node Type Info */}
+      <div className="mb-6">
+        <h3 className="text-md font-semibold text-[#00F6FF]">
+          {node.data.label}
+        </h3>
+        {node.data.description && (
+          <p className="text-sm text-gray-400 mt-1">{node.data.description}</p>
+        )}
+      </div>
+
+      {/* Configuration Fields */}
+      {node.data.config.map((field: any) => (
+        <div key={field.name} className="mb-4">
+          <label className="block text-sm font-medium mb-1">
             {field.name}
             {field.required !== false && (
-              <span className="text-red-500">*</span>
+              <span className="text-red-500 ml-1">*</span>
             )}
           </label>
 
           {field.type === "string" && (
             <input
               type="text"
-              value={localValues?.[field.name] || ""}
+              value={localValues[field.name] || ""}
               onChange={(e) => handleInputChange(field.name, e.target.value)}
               placeholder={field.description}
               className="w-full bg-gray-800 border border-gray-600 rounded p-2 text-sm"
@@ -88,7 +128,7 @@ const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
             <div className="flex items-center">
               <input
                 type="checkbox"
-                checked={localValues?.[field.name] || false}
+                checked={Boolean(localValues[field.name])}
                 onChange={(e) =>
                   handleInputChange(field.name, e.target.checked)
                 }
@@ -100,11 +140,11 @@ const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
 
           {field.type === "choice" && (
             <select
-              value={localValues?.[field.name] || field.options?.[0] || ""}
+              value={localValues[field.name] || ""}
               onChange={(e) => handleInputChange(field.name, e.target.value)}
               className="w-full bg-gray-800 border border-gray-600 rounded p-2 text-sm"
             >
-              {field.options?.map((option: string) => (
+              {(field.options || []).map((option: string) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -113,107 +153,22 @@ const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
           )}
 
           {field.description && field.type !== "boolean" && (
-            <p className="text-xs text-gray-400">{field.description}</p>
+            <p className="text-xs text-gray-400 mt-1">{field.description}</p>
           )}
         </div>
-      ));
-    }
+      ))}
 
-    // If config is in properties format
-    const propertiesConfig =
-      node?.data?.config?.properties ||
-      node?.data?.nodeInfo?.config_schema?.properties;
-
-    if (propertiesConfig) {
-      return Object.entries(propertiesConfig).map(
-        ([key, value]: [string, any]) => {
-          const required =
-            node?.data?.config?.required?.includes(key) ||
-            node?.data?.nodeInfo?.config_schema?.required?.includes(key);
-
-          return (
-            <div key={key} className="space-y-1">
-              <label className="text-sm font-medium">
-                {key}
-                {required && <span className="text-red-500">*</span>}
-              </label>
-
-              {value.type === "string" && (
-                <input
-                  type="text"
-                  value={localValues?.[key] || ""}
-                  onChange={(e) => handleInputChange(key, e.target.value)}
-                  placeholder={value.description || ""}
-                  className="w-full bg-gray-800 border border-gray-600 rounded p-2 text-sm"
-                />
-              )}
-
-              {value.type === "boolean" && (
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={localValues?.[key] || false}
-                    onChange={(e) => handleInputChange(key, e.target.checked)}
-                    className="mr-2 bg-gray-800 border border-gray-600 rounded"
-                  />
-                  <span className="text-sm text-gray-400">
-                    {value.description || ""}
-                  </span>
-                </div>
-              )}
-
-              {value.enum && (
-                <select
-                  value={localValues?.[key] || value.enum[0] || ""}
-                  onChange={(e) => handleInputChange(key, e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-600 rounded p-2 text-sm"
-                >
-                  {value.enum.map((option: string) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {value.description && value.type !== "boolean" && (
-                <p className="text-xs text-gray-400">{value.description}</p>
-              )}
-            </div>
-          );
-        }
-      );
-    }
-
-    return (
-      <div className="p-4 text-gray-400">
-        <p>No configuration options available for this node.</p>
-        <p className="text-xs mt-2">
-          Node type: {node?.data?.label || node?.type}
-        </p>
-      </div>
-    );
-  };
-
-  return (
-    <div className="space-y-4">
-      {renderFields()}
-
-      {/* Debug info - can be removed in production */}
-      <div className="mt-6 pt-4 border-t border-gray-700">
+      {/* Debug Info */}
+      <div className="mt-8 pt-4 border-t border-gray-700">
         <details className="text-xs text-gray-500">
           <summary>Debug Node Info</summary>
           <pre className="mt-2 p-2 bg-gray-900 rounded overflow-auto max-h-40">
             {JSON.stringify(
               {
-                id: node?.id,
-                type: node?.type,
-                label: node?.data?.label,
-                hasConfig: Boolean(
-                  node?.data?.config?.length ||
-                    node?.data?.nodeInfo?.config_schema
-                ),
-                valuesCount: Object.keys(localValues || {}).length,
+                id: node.id,
+                type: node.data.label,
+                configFields: node.data.config.map((f: any) => f.name),
+                values: localValues,
               },
               null,
               2
