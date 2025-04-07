@@ -72,15 +72,16 @@ const NodePanel: FC<NodePanelProps> = ({
         .includes(searchTerm.toLowerCase());
 
     const matchesCategory = !activeCategory || node.category === activeCategory;
-
     return matchesSearch && matchesCategory;
   });
+
+  console.log(filteredNodes);
 
   if (!isOpen) return null;
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center z-50 bg-black/20 backdrop-blur-sm"
+      className="fixed inset-0 flex items-center justify-center z-50 bg-black/20 "
       onClick={onClose}
     >
       <div
@@ -162,13 +163,14 @@ const NodePanel: FC<NodePanelProps> = ({
                   draggable
                 >
                   <div className="w-12 h-12 bg-[#0c3a4c] text-white rounded-full flex items-center justify-center mb-2">
-                    {node.icon ? (
-                      <span className="font-bold">{node.icon}</span>
-                    ) : (
+                    {
+                      // node.icon ? (
+                      //   <span className="font-bold">{node.icon}</span>
+                      // ) : (
                       <span className="text-[#00F6FF] font-bold">
-                        {node.name.charAt(0)}
+                        {node.name.charAt(0).toUpperCase()}
                       </span>
-                    )}
+                    }
                   </div>
                   <span className="text-center font-medium text-sm">
                     {node.name}

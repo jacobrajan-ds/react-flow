@@ -508,7 +508,7 @@ export default function WorkflowPage() {
 
           <div className="py-2"></div>
 
-          <div className="w-full py-5 flex justify-between items-center bg-[#071026]/60 rounded-xl backdrop-blur-sm px-6 shadow-lg shadow-[#00F6FF]/5 border border-[#00F6FF]/10 mb-8">
+          <div className="w-full py-5 flex justify-between items-center bg-[#071026]/60 rounded-xl px-6 shadow-lg shadow-[#00F6FF]/5 border border-[#00F6FF]/10 mb-8">
             {/* Left side: View toggles with modern design */}
             <div className="flex items-center gap-6">
               <div className="relative bg-[#0A162E] rounded-lg p-1 shadow-inner shadow-black/20 w-52">

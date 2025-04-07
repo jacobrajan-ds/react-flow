@@ -39,7 +39,6 @@ import axiosInstance from "@/utils/axios";
 import { Play } from "lucide-react";
 import Link from "next/link";
 
-// Types (same as before)
 interface PlaybookVersion {
   id: string;
   version_number: number;
@@ -76,6 +75,19 @@ interface Collection {
   parent_id: string | null;
   playbook: Playbook[];
   collection: Collection[];
+}
+
+interface FormData {
+  name: string;
+  description: string;
+  parent_id: string;
+  owner_id: string;
+  collection_id: string;
+  playbook_id: string;
+  execution_mode: string;
+  version: string;
+  module_code: string;
+  playbook: string;
 }
 
 interface WorkflowItem {
@@ -128,44 +140,26 @@ export default function WorkflowTable({
     execution_mode: "Manual",
   });
 
-  // Internal items state - no longer uses parent's displayItems directly
   const [internalItems, setInternalItems] = useState<any[]>([]);
 
-  // Update internal items when collections prop changes
   useEffect(() => {
     setInternalItems(collections);
   }, [collections]);
 
-  useEffect(() => {
-    console.log("Raw collections data:", collections);
-  }, [collections]);
-
-  // Reset expanded rows when refreshTrigger changes
   useEffect(() => {
     if (refreshTrigger > 0) {
       setExpandedRows({});
     }
   }, [refreshTrigger]);
 
-  // Current date and user information
   const currentDate = "2025-04-04 05:49:57";
   const currentUser = "imjacobrajan";
 
-  // Generate a unique dialog ID
   const dialogId = useMemo(() => {
     if (!modalType) return "";
     return `${modalType}-dialog-${currentParentId}`;
   }, [modalType, currentParentId]);
-  useEffect(() => {
-    console.log("Raw collections prop:", collections);
 
-    if (collections && collections.length > 0) {
-      console.log(
-        "Sample collection structure:",
-        JSON.stringify(collections[0], null, 2)
-      );
-    }
-  }, [collections]);
   const handleOpenDialog = (
     type: "collection" | "playbook" | "playbookVersion",
     parentId: string
@@ -179,7 +173,10 @@ export default function WorkflowTable({
       owner_id: "",
       collection_id: type === "playbook" ? parentId : "",
       playbook_id: type === "playbookVersion" ? parentId : "",
-      execution_mode: "Manual",
+      execution_mode: "MANUAL",
+      version: "1.0.0", // Default version
+      module_code: "", // Default code
+      playbook: type === "playbookVersion" ? parentId : "", // Set playbook UUID from parentId
     });
     setIsDialogOpen(true);
   };
@@ -237,12 +234,12 @@ export default function WorkflowTable({
     } else if (modalType === "playbookVersion") {
       url = "/api/playbook-version";
       payload = {
-        version_number: 1, // Default for new version
+        version: formData.version,
         execution_mode: formData.execution_mode,
-        module_code: "// Default code",
+        module_code: formData.module_code,
+        playbook: formData.playbook_id, // Using the parent playbook ID
         is_latest: true,
         is_active: true,
-        playbook_id: formData.playbook_id,
       };
     }
 
@@ -898,25 +895,84 @@ export default function WorkflowTable({
             )}
 
             {modalType === "playbookVersion" && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label
-                  htmlFor={`${dialogId}-execution-mode-field`}
-                  className="text-right text-gray-300"
-                >
-                  Execution Mode
-                </label>
-                <select
-                  id={`${dialogId}-execution-mode-field`}
-                  name="execution_mode"
-                  value={formData.execution_mode}
-                  onChange={handleInputChange}
-                  className="col-span-3 bg-[#0F172A] text-white border border-gray-700 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Manual">Manual</option>
-                  <option value="Scheduled">Scheduled</option>
-                  <option value="Webhook">Webhook</option>
-                </select>
-              </div>
+              <>
+                <div className="grid grid-cols-8 items-center gap-4">
+                  <label
+                    htmlFor={`${dialogId}-version-field`}
+                    className="text-left text-gray-300 col-span-3"
+                  >
+                    Version *
+                  </label>
+                  <input
+                    id={`${dialogId}-version-field`}
+                    name="version"
+                    value={formData.version || ""}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="e.g. 1.0.0"
+                    className="col-span-5 bg-[#0F172A] text-white border border-gray-700 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-8 items-center gap-4">
+                  <label
+                    htmlFor={`${dialogId}-execution-mode-field`}
+                    className=" text-gray-300 col-span-3"
+                  >
+                    Execution Mode *
+                  </label>
+                  <select
+                    id={`${dialogId}-execution-mode-field`}
+                    name="execution_mode"
+                    value={formData.execution_mode || "MANUAL"}
+                    onChange={handleInputChange}
+                    required
+                    className="col-span-5 bg-[#0F172A] text-white border border-gray-700 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="MANUAL">MANUAL</option>
+                    <option value="ON_CREATE">ON_CREATE</option>
+                    <option value="ON_UPDATE">ON_UPDATE</option>
+                    <option value="ON_DELETE">ON_DELETE</option>
+                    <option value="SUB">SUB</option>
+                    <option value="WEBHOOK">WEBHOOK</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-8 items-center gap-4">
+                  <label
+                    htmlFor={`${dialogId}-module-code-field`}
+                    className="text-left text-gray-300 col-span-3"
+                  >
+                    Module Code *
+                  </label>
+                  <input
+                    id={`${dialogId}-module-code-field`}
+                    name="module_code"
+                    value={formData.module_code || ""}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Enter module code"
+                    className=" col-span-5 bg-[#0F172A] text-white border border-gray-700 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 "
+                  />
+                </div>
+
+                <div className="grid grid-cols-8 items-center gap-4">
+                  <label
+                    htmlFor={`${dialogId}-playbook-id-field`}
+                    className="text-left text-gray-300 col-span-3"
+                  >
+                    Playbook ID *
+                  </label>
+                  <input
+                    id={`${dialogId}-playbook-id-field`}
+                    name="playbook"
+                    value={formData.playbook_id || ""}
+                    onChange={handleInputChange}
+                    disabled
+                    className="col-span-5 bg-[#0F172A] text-white border border-gray-700 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 opacity-70"
+                  />
+                </div>
+              </>
             )}
           </div>
 

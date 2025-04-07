@@ -676,7 +676,7 @@ function PlaybookContent() {
             <Panel position="top-right" className="m-4">
               <button
                 onClick={() => setIsDebugVisible(!isDebugVisible)}
-                className="bg-[#071026]/80 backdrop-blur-sm text-white p-2 rounded-lg border border-[#00F6FF]/10 hover:bg-[#0A162E] transition-colors"
+                className="bg-[#071026]/80  text-white p-2 rounded-lg border border-[#00F6FF]/10 hover:bg-[#0A162E] transition-colors"
               >
                 {isDebugVisible ? <EyeOff size={18} /> : <Bug size={18} />}
               </button>

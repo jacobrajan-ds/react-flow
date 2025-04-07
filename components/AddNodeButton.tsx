@@ -14,8 +14,8 @@ const AddNodeButton: FC<AddNodeButtonProps> = ({ nodeTypes }) => {
     // Position the panel near the button
     const buttonRect = e.currentTarget.getBoundingClientRect();
     setPanelPosition({
-      x: buttonRect.left,
-      y: buttonRect.bottom + 10,
+      x: buttonRect.right + 10,
+      y: buttonRect.bottom - 45,
     });
     setIsPanelOpen(true);
   };

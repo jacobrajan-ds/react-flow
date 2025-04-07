@@ -59,14 +59,14 @@ const DynamicNode = memo(({ data, isConnectable, selected }: NodeProps) => {
         type="target"
         position={Position.Left}
         id="input"
-        style={{ background: "#00F6FF" }}
+        style={{ background: "#00F6FF", width: 10, height: 10 }}
         isConnectable={isConnectable}
       />
       <Handle
         type="source"
         position={Position.Right}
         id="output"
-        style={{ background: "#00F6FF" }}
+        style={{ background: "#00F6FF", width: 10, height: 10 }}
         isConnectable={isConnectable}
       />
     </div>
