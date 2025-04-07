@@ -485,7 +485,7 @@ export default function WorkflowPage() {
 
     // Handle navigation in table view
     if (item?.type === "playbookVersion") {
-      router.push(`/workflow/${item.parent_id}`);
+      router.push(`/playbook/${item.parent_id}`);
     }
   };
 

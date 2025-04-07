@@ -1,12 +1,11 @@
 import React, { FC, DragEvent, useState, useRef, useEffect } from "react";
-import { FiX } from "react-icons/fi";
-import { NodeTypeDefinition } from "@/app/types/flow";
+import { X } from "lucide-react";
 
 interface NodePanelProps {
   isOpen: boolean;
   onClose: () => void;
   position?: { x: number; y: number };
-  nodeTypes: NodeTypeDefinition[];
+  nodeTypes: any[];
 }
 
 const NodePanel: FC<NodePanelProps> = ({
@@ -20,6 +19,7 @@ const NodePanel: FC<NodePanelProps> = ({
   const [categories, setCategories] = useState<string[]>([]);
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // Extract unique categories from nodeTypes
   useEffect(() => {
     if (nodeTypes.length > 0) {
       const uniqueCategories = Array.from(
@@ -30,11 +30,19 @@ const NodePanel: FC<NodePanelProps> = ({
     }
   }, [nodeTypes]);
 
-  const onDragStart = (event: DragEvent<HTMLDivElement>, nodeType: string) => {
-    event.dataTransfer.setData("application/reactflow", nodeType);
+  // Handle drag start to work with React Flow
+  const onDragStart = (event: DragEvent<HTMLDivElement>, nodeType: any) => {
+    event.dataTransfer.setData(
+      "application/reactflow",
+      JSON.stringify({
+        nodeType: nodeType.name,
+        nodeInfo: nodeType,
+      })
+    );
     event.dataTransfer.effectAllowed = "move";
   };
 
+  // Close panel when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -54,11 +62,14 @@ const NodePanel: FC<NodePanelProps> = ({
     };
   }, [isOpen, onClose]);
 
+  // Filter nodes based on search term and active category
   const filteredNodes = nodeTypes.filter((node) => {
     const matchesSearch =
       !searchTerm ||
-      node.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      node.description.toLowerCase().includes(searchTerm.toLowerCase());
+      node.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (node.config_schema?.description || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
 
     const matchesCategory = !activeCategory || node.category === activeCategory;
 
@@ -69,12 +80,12 @@ const NodePanel: FC<NodePanelProps> = ({
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center z-50"
+      className="fixed inset-0 flex items-center justify-center z-50 bg-black/20 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
         ref={panelRef}
-        className="bg-[#071026] rounded-lg shadow-xl w-60 text-white max-h-[80vh] flex flex-col"
+        className="bg-[#071026] rounded-lg shadow-xl w-60 text-white max-h-[80vh] flex flex-col border border-[#00F6FF]/10"
         style={{
           position: "absolute",
           left: `${position.x}px`,
@@ -82,13 +93,13 @@ const NodePanel: FC<NodePanelProps> = ({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center p-4 border-b border-gray-600">
-          <h2 className="font-bold text-lg">Add Node</h2>
+        <div className="flex justify-between items-center p-4 border-b border-[#00F6FF]/10">
+          <h2 className="font-bold text-[#00F6FF]">Add Node</h2>
           <button
-            className="text-gray-500 hover:text-gray-700"
+            className="text-gray-400 hover:text-white transition-colors"
             onClick={onClose}
           >
-            <FiX size={20} />
+            <X size={20} />
           </button>
         </div>
 
@@ -97,7 +108,7 @@ const NodePanel: FC<NodePanelProps> = ({
             <input
               type="text"
               placeholder="Search nodes..."
-              className="w-full px-10 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-none"
+              className="w-full px-10 py-2 bg-[#0A162E] border border-[#00F6FF]/20 rounded-md focus:outline-none focus:border-[#00F6FF]/50 text-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -124,7 +135,7 @@ const NodePanel: FC<NodePanelProps> = ({
                   key={category}
                   className={`p-2 rounded-md text-xs text-center whitespace-nowrap ${
                     activeCategory === category
-                      ? "bg-[#0b253a] text-white "
+                      ? "bg-[#0b253a] text-white"
                       : "text-white"
                   }`}
                   onClick={() => setActiveCategory(category)}
@@ -138,30 +149,32 @@ const NodePanel: FC<NodePanelProps> = ({
 
         <div className="flex-1 overflow-auto p-4">
           {filteredNodes.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
+            <div className="text-center text-gray-400 py-8">
               No nodes found matching your criteria
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4">
               {filteredNodes.map((node, index) => (
                 <div
-                  key={index}
-                  className=" p-4 rounded border border-gray-600 flex flex-col items-center cursor-grab hover:border-gray-300 transition-colors"
-                  onDragStart={(e) => onDragStart(e, node.id)}
+                  key={node.id || index}
+                  className="p-4 rounded border border-[#00F6FF]/20 flex flex-col items-center cursor-grab hover:border-[#00F6FF]/50 transition-colors bg-[#0A162E]"
+                  onDragStart={(e) => onDragStart(e, node)}
                   draggable
                 >
                   <div className="w-12 h-12 bg-[#0c3a4c] text-white rounded-full flex items-center justify-center mb-2">
                     {node.icon ? (
-                      <span className=" font-bold">{node.icon}</span>
+                      <span className="font-bold">{node.icon}</span>
                     ) : (
-                      <span className="text-gray-600 font-bold">
-                        {node.label.charAt(0)}
+                      <span className="text-[#00F6FF] font-bold">
+                        {node.name.charAt(0)}
                       </span>
                     )}
                   </div>
-                  <span className="text-center font-medium">{node.label}</span>
-                  <span className="text-xs text-gray-500 text-center mt-1">
-                    {/* {node.description} */}
+                  <span className="text-center font-medium text-sm">
+                    {node.name}
+                  </span>
+                  <span className="text-xs text-gray-400 text-center mt-1 line-clamp-1">
+                    {node.group || node.app_type || ""}
                   </span>
                 </div>
               ))}

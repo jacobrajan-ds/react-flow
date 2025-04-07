@@ -40,6 +40,7 @@ import NodeConfiguration from "@/components/configurations/NodeConfiguration";
 import DebugPanel from "@/components/DebugPanel";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import Sidebar from "@/components/Sidebar";
+import AddNodeButton from "@/components/AddNodeButton";
 
 // Types definitions for the component
 interface PlaybookNode {
@@ -668,31 +669,7 @@ function PlaybookContent() {
 
             {/* Add node panel */}
             <Panel position="top-left" className="m-4">
-              <div className="bg-[#071026]/80 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-[#00F6FF]/10">
-                <div className="text-sm text-gray-400 mb-2 px-2">Add Node</div>
-
-                {/* Group nodes by type */}
-                {Object.entries(groupNodesByType(availableNodeTypes)).map(
-                  ([group, nodes]) => (
-                    <div key={group} className="mb-3">
-                      <div className="text-xs text-gray-400 mb-1 px-2 uppercase">
-                        {group}
-                      </div>
-                      <div className="flex flex-wrap gap-2 max-w-[400px]">
-                        {nodes.map((nodeType) => (
-                          <DraggableNode
-                            key={nodeType.id}
-                            type={nodeType.name}
-                            label={nodeType.name}
-                            nodeInfo={nodeType}
-                            onDragStart={onDragStart}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
+              <AddNodeButton nodeTypes={availableNodeTypes} />
             </Panel>
 
             {/* Debug panel toggle */}

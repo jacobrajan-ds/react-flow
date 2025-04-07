@@ -1,10 +1,9 @@
 import React, { FC, useState } from "react";
-import { FiPlus } from "react-icons/fi";
+import { Plus } from "lucide-react";
 import NodePanel from "./NodePanel";
-import { NodeTypeDefinition } from "@/app/types/flow";
 
 interface AddNodeButtonProps {
-  nodeTypes: NodeTypeDefinition[];
+  nodeTypes: any[];
 }
 
 const AddNodeButton: FC<AddNodeButtonProps> = ({ nodeTypes }) => {
@@ -24,10 +23,10 @@ const AddNodeButton: FC<AddNodeButtonProps> = ({ nodeTypes }) => {
   return (
     <>
       <button
-        className="bg-[#071026] text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-[#071026] transition-colors"
+        className="bg-[#071026] text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-[#0A162E] transition-colors border border-[#00F6FF]/30"
         onClick={handleOpenPanel}
       >
-        <FiPlus size={24} />
+        <Plus size={24} />
       </button>
 
       <NodePanel
