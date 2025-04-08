@@ -118,3 +118,16 @@
     @apply bg-background text-foreground;
   }
 }
+
+.react-flow__controls {
+  background-color: #071026 !important;
+}
+
+.react-flow__controls-button {
+  background: transparent !important;
+  border: none !important;
+}
+
+.react-flow__attribution {
+  display: none !important;
+}

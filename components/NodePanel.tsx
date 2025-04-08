@@ -19,7 +19,6 @@ const NodePanel: FC<NodePanelProps> = ({
   const [categories, setCategories] = useState<string[]>([]);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Extract unique categories from nodeTypes
   useEffect(() => {
     if (nodeTypes.length > 0) {
       const uniqueCategories = Array.from(
@@ -30,7 +29,6 @@ const NodePanel: FC<NodePanelProps> = ({
     }
   }, [nodeTypes]);
 
-  // Handle drag start to work with React Flow
   const onDragStart = (event: DragEvent<HTMLDivElement>, nodeType: any) => {
     event.dataTransfer.setData(
       "application/reactflow",
@@ -42,7 +40,6 @@ const NodePanel: FC<NodePanelProps> = ({
     event.dataTransfer.effectAllowed = "move";
   };
 
-  // Close panel when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -62,7 +59,6 @@ const NodePanel: FC<NodePanelProps> = ({
     };
   }, [isOpen, onClose]);
 
-  // Filter nodes based on search term and active category
   const filteredNodes = nodeTypes.filter((node) => {
     const matchesSearch =
       !searchTerm ||

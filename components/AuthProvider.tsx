@@ -42,7 +42,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       initialized.current = true;
       const storedToken = getCookie();
 
-      // Check if current route is public
       const isPublicRoute =
         pathname === "/onboard" || pathname.startsWith("/onboard/");
 

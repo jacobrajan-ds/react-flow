@@ -11,7 +11,6 @@ const AddNodeButton: FC<AddNodeButtonProps> = ({ nodeTypes }) => {
   const [panelPosition, setPanelPosition] = useState({ x: 0, y: 0 });
 
   const handleOpenPanel = (e: React.MouseEvent) => {
-    // Position the panel near the button
     const buttonRect = e.currentTarget.getBoundingClientRect();
     setPanelPosition({
       x: buttonRect.right + 10,

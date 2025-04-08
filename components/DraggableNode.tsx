@@ -17,7 +17,6 @@ const DraggableNode: React.FC<DraggableNodeProps> = ({
   nodeInfo,
   onDragStart,
 }) => {
-  // Determine background color based on app_type
   const getBgColor = () => {
     switch (nodeInfo?.app_type) {
       case "START":
@@ -31,27 +30,26 @@ const DraggableNode: React.FC<DraggableNodeProps> = ({
     }
   };
 
-  // Get an icon based on the node type or group
   const getNodeIcon = () => {
     const group = nodeInfo?.group?.toLowerCase() || "";
 
     if (group.includes("communication")) {
-      return "📧"; // Email/Communication
+      return "📧";
     } else if (group.includes("input")) {
-      return "📥"; // Input
+      return "📥";
     } else if (group.includes("output")) {
-      return "📤"; // Output
+      return "📤";
     } else if (group.includes("process")) {
-      return "⚙️"; // Process
+      return "⚙️";
     } else if (group.includes("data")) {
-      return "💾"; // Data
+      return "💾";
     } else if (nodeInfo?.app_type === "START") {
-      return "🚀"; // Start
+      return "🚀";
     } else if (nodeInfo?.app_type === "END") {
-      return "🏁"; // End
+      return "🏁";
     }
 
-    return "📝"; // Default
+    return "📝";
   };
 
   return (

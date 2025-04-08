@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   ReactFlow,
@@ -12,9 +11,10 @@ import {
   NodeTypes,
   OnConnect,
   NodeMouseHandler,
+  EdgeMouseHandler,
   Connection,
   applyNodeChanges,
-  Edge,
+  applyEdgeChanges,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { v4 as uuidv4 } from "uuid";
@@ -31,18 +31,16 @@ import {
   Settings,
 } from "lucide-react";
 
-// Import your dynamic node component
 import DynamicNode from "@/components/nodes/DynamicNode";
 import DraggableNode from "@/components/DraggableNode";
 
-// Import other necessary components
 import NodeConfiguration from "@/components/configurations/NodeConfiguration";
 import DebugPanel from "@/components/DebugPanel";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import Sidebar from "@/components/Sidebar";
 import AddNodeButton from "@/components/AddNodeButton";
+import EdgePanel from "@/components/EdgePanel";
 
-// Types definitions for the component
 interface PlaybookNode {
   id: string;
   type: string;
@@ -62,6 +60,9 @@ interface PlaybookEdge {
   sourceHandle?: string;
   targetHandle?: string;
   data?: any;
+  animated?: boolean;
+  strokeWidth?: number;
+  color?: string;
 }
 
 interface PlaybookVersion {
@@ -139,6 +140,7 @@ function PlaybookContent() {
   const [nodes, setNodes] = useState<PlaybookNode[]>([]);
   const [edges, setEdges] = useState<PlaybookEdge[]>([]);
   const [selectedNode, setSelectedNode] = useState<PlaybookNode | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<PlaybookEdge | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
@@ -150,8 +152,8 @@ function PlaybookContent() {
   const [availableNodeTypes, setAvailableNodeTypes] = useState<
     NodeTypeConfig[]
   >([]);
+  const [isEdgePanelOpen, setIsEdgePanelOpen] = useState(false);
 
-  // Ref for the ReactFlow wrapper div
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const router = useRouter();
@@ -162,16 +164,13 @@ function PlaybookContent() {
 
   const reactFlowInstance = useReactFlow();
 
-  // Initialize node types
   useEffect(() => {
     const defaultNodeTypes: NodeTypes = {
-      // Use the dynamic node for all node types
       dynamicNode: DynamicNode,
     };
     setNodeTypes(defaultNodeTypes);
   }, []);
 
-  // Fetch node types from API
   useEffect(() => {
     async function fetchNodeTypes() {
       try {
@@ -187,14 +186,11 @@ function PlaybookContent() {
     fetchNodeTypes();
   }, []);
 
-  // Load playbook data
-  // Inside the loadPlaybook function
   async function loadPlaybook() {
     if (!playbookId) return;
 
     setIsTransitioning(true);
     try {
-      // First, ensure the node types are loaded
       let nodeTypesData = availableNodeTypes;
       if (availableNodeTypes.length === 0) {
         const nodeTypesResponse = await axiosInstance.get("/api/app");
@@ -213,20 +209,16 @@ function PlaybookContent() {
         console.log("Loaded playbook data:", playbookData);
         setPlaybook(playbookData);
 
-        // Get the version data directly from the response
         const version = playbookData;
 
         if (version) {
           setActiveVersion(version);
 
-          // Transform nodes and edges for ReactFlow
           const transformedNodes = version.nodes.map((node) => {
-            // Extract the node type name from the label
             const nodeTypeName = node.data?.label;
 
             console.log(`Processing node: ${node.id}, type: ${nodeTypeName}`);
 
-            // Find the corresponding node type config from available node types
             const nodeTypeConfig = nodeTypesData.find(
               (type) => type.name === nodeTypeName
             );
@@ -239,15 +231,11 @@ function PlaybookContent() {
               console.log(`Found configuration for node type ${nodeTypeName}`);
             }
 
-            // Get the field definitions from the node type configuration
             const fieldDefinitions =
               nodeTypeConfig?.config_schema?.fields || [];
 
-            // Extract existing field values from node data
-            // Fields that are not 'label' or 'description' are considered values
             const existingValues = {};
 
-            // Copy all fields from node.data that aren't metadata
             if (node.data) {
               Object.keys(node.data).forEach((key) => {
                 if (key !== "label" && key !== "description") {
@@ -258,29 +246,22 @@ function PlaybookContent() {
 
             console.log(`Node ${node.id} existing values:`, existingValues);
 
-            // Prepare node data with configuration
             const nodeData = {
-              // Base node data
               label: node.data?.label || "",
               description:
                 node.data?.description ||
                 nodeTypeConfig?.config_schema?.description ||
                 "",
 
-              // Add the configuration fields
               config: fieldDefinitions,
 
-              // Add a ready-to-use values object
               values: existingValues,
 
-              // Store the full node type info for reference if needed
               nodeTypeInfo: nodeTypeConfig,
             };
 
-            // If there are field definitions but no values yet, initialize with defaults
             if (fieldDefinitions.length > 0) {
               fieldDefinitions.forEach((field) => {
-                // Only set default if not already set
                 if (nodeData.values[field.name] === undefined) {
                   if (field.type === "choice" && field.options?.length) {
                     nodeData.values[field.name] = field.options[0];
@@ -307,9 +288,11 @@ function PlaybookContent() {
             target: edge.target,
             sourceHandle: edge.sourceHandle,
             targetHandle: edge.targetHandle,
+            animated: true, // Initially set animated to true for marching ants
+            strokeWidth: edge.strokeWidth || 1,
+            color: edge.color || "#000000",
           }));
 
-          // Log a sample transformed node for debugging
           if (transformedNodes.length > 0) {
             console.log("Sample transformed node:", transformedNodes[0]);
           }
@@ -321,7 +304,6 @@ function PlaybookContent() {
             setIsLoading(false);
           }, 100);
         } else {
-          // No version found
           console.warn("No version found for this playbook");
           setIsTransitioning(false);
           setIsLoading(false);
@@ -341,11 +323,16 @@ function PlaybookContent() {
   useEffect(() => {
     loadPlaybook();
   }, [playbookId]);
+
   const onNodeClick: NodeMouseHandler = useCallback((_, node) => {
     setSelectedNode(node as PlaybookNode);
   }, []);
 
-  // Handle connection between nodes
+  const onEdgeClick: EdgeMouseHandler = useCallback((_, edge) => {
+    setSelectedEdge(edge as PlaybookEdge);
+    setIsEdgePanelOpen(true);
+  }, []);
+
   const onConnect: OnConnect = useCallback((params: Connection) => {
     const newEdge: PlaybookEdge = {
       ...params,
@@ -354,18 +341,37 @@ function PlaybookContent() {
       target: params.target || "",
       sourceHandle: params.sourceHandle || undefined,
       targetHandle: params.targetHandle || undefined,
+      animated: true, // Initially set animated to true for marching ants
+      strokeWidth: 1,
+      color: "#000000",
     };
     setEdges((eds) => addEdge(newEdge, eds));
   }, []);
 
-  // Handle node changes (moving, selecting)
   const onNodesChange = useCallback((changes) => {
-    setNodes((nds) => applyNodeChanges(changes, nds));
+    setNodes((nds) => {
+      const newNodes = applyNodeChanges(changes, nds);
+      const deletedNodeIds = changes
+        .filter((change) => change.type === "remove")
+        .map((change) => change.id);
+      setEdges((eds) =>
+        eds.filter(
+          (edge) =>
+            !deletedNodeIds.includes(edge.source) &&
+            !deletedNodeIds.includes(edge.target)
+        )
+      );
+      return newNodes;
+    });
   }, []);
 
-  // Handle pane click (deselect node)
+  const onEdgesChange = useCallback((changes) => {
+    setEdges((eds) => applyEdgeChanges(changes, eds));
+  }, []);
+
   const onPaneClick = useCallback(() => {
     setSelectedNode(null);
+    setSelectedEdge(null);
   }, []);
 
   const handleNodeDataChange = useCallback(
@@ -393,12 +399,29 @@ function PlaybookContent() {
     [selectedNode]
   );
 
-  // Group nodes by type for the panel
+  const handleEdgeDataChange = useCallback(
+    (updatedData: any) => {
+      if (!selectedEdge) return;
+
+      setEdges((eds) =>
+        eds.map((edge) => {
+          if (edge.id === selectedEdge.id) {
+            return {
+              ...edge,
+              ...updatedData,
+            };
+          }
+          return edge;
+        })
+      );
+    },
+    [selectedEdge]
+  );
+
   const groupNodesByType = (nodes: NodeTypeConfig[]) => {
     const groups: Record<string, NodeTypeConfig[]> = {};
 
     nodes.forEach((node) => {
-      // Group by group property first, fallback to app_type
       const groupKey = node.group || node.app_type || "Other";
 
       if (!groups[groupKey]) {
@@ -411,10 +434,8 @@ function PlaybookContent() {
     return groups;
   };
 
-  // Handle when drag starts on a node in the sidebar
   const onDragStart = useCallback(
     (event: React.DragEvent, nodeType: string, nodeInfo: NodeTypeConfig) => {
-      // Set the drag data
       event.dataTransfer.setData(
         "application/reactflow",
         JSON.stringify({ nodeType, nodeInfo })
@@ -424,13 +445,11 @@ function PlaybookContent() {
     []
   );
 
-  // Handle when drag is over the ReactFlow area
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
   }, []);
 
-  // Handle when a node is dropped onto the ReactFlow area
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
@@ -440,31 +459,25 @@ function PlaybookContent() {
       const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
       const dragData = event.dataTransfer.getData("application/reactflow");
 
-      // If no drag data or invalid data, return
       if (!dragData) return;
 
       try {
         const { nodeType, nodeInfo } = JSON.parse(dragData);
 
-        // Calculate the position of the drop relative to the ReactFlow viewport
         const position = reactFlowInstance.screenToFlowPosition({
           x: event.clientX - reactFlowBounds.left,
           y: event.clientY - reactFlowBounds.top,
         });
 
-        // Create node data with configuration from the API
         const nodeData = {
           label: nodeInfo.name || nodeType,
           description: nodeInfo.config_schema?.description || "",
-          // Add config schema fields
           config: nodeInfo.config_schema?.fields || [],
-          // Initialize with empty values
           values: {},
         };
 
         const newNode = {
           id: generateUniqueId(),
-          // Always use the dynamic node type
           type: "dynamicNode",
           position,
           data: nodeData,
@@ -478,7 +491,6 @@ function PlaybookContent() {
     [reactFlowInstance]
   );
 
-  // Save the workflow
   const saveWorkflow = useCallback(async () => {
     if (!playbookId || !activeVersion) {
       console.error("Missing playbookId or activeVersion");
@@ -487,7 +499,6 @@ function PlaybookContent() {
 
     setIsSaving(true);
     try {
-      // Format nodes and edges for API
       const formattedNodes = nodes.map((node) => ({
         id: node.id,
         type:
@@ -496,7 +507,7 @@ function PlaybookContent() {
         data: {
           label: node.data.label,
           description: node.data.description,
-          ...node.data.values, // Include only entered node configuration values
+          ...node.data.values,
         },
       }));
 
@@ -507,6 +518,9 @@ function PlaybookContent() {
         sourceHandle: edge.sourceHandle,
         targetHandle: edge.targetHandle,
         label: edge.label,
+        animated: edge.animated,
+        strokeWidth: edge.strokeWidth,
+        color: edge.color,
       }));
 
       const payload = {
@@ -518,7 +532,6 @@ function PlaybookContent() {
 
       console.log("Saving workflow with payload:", payload);
 
-      // Send the API request
       const response = await axiosInstance.patch(
         `/api/playbook/save-playbook/${activeVersion.id}`,
         payload
@@ -527,7 +540,6 @@ function PlaybookContent() {
       if (response && response.status >= 200 && response.status < 300) {
         console.log("Workflow saved successfully:", response.data);
 
-        // Optionally update workflow state with the response
         if (response.data && response.data.updated_at) {
           setActiveVersion((prev) =>
             prev
@@ -548,7 +560,6 @@ function PlaybookContent() {
     }
   }, [playbookId, activeVersion, nodes, edges]);
 
-  // Execute the workflow
   const executeWorkflow = useCallback(async () => {
     if (!playbookId || !activeVersion) return;
 
@@ -583,12 +594,10 @@ function PlaybookContent() {
     }
   }, [playbookId, activeVersion]);
 
-  // Handle going back to workflows page
   const handleBackToWorkflows = () => {
     router.push("/");
   };
 
-  // Render loading state
   if (isLoading || isTransitioning) {
     return (
       <div className="flex h-full items-center justify-center bg-[#0c3a4c]">
@@ -601,10 +610,7 @@ function PlaybookContent() {
 
   return (
     <div className="flex h-screen bg-[#131B2F] text-white">
-      {/* <Sidebar /> */}
-
       <div className="flex-1 h-full overflow-hidden flex flex-col">
-        {/* Header */}
         <div className="bg-[#071026] p-4 border-b border-[#00F6FF]/10 flex justify-between items-center">
           <div className="flex items-center">
             <button
@@ -650,14 +656,15 @@ function PlaybookContent() {
           </div>
         </div>
 
-        {/* Main content */}
         <div className="flex-1 relative" ref={reactFlowWrapper}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
+            onEdgeClick={onEdgeClick}
             onPaneClick={onPaneClick}
             onDragOver={onDragOver}
             onDrop={onDrop}
@@ -665,14 +672,18 @@ function PlaybookContent() {
             fitView
           >
             <Background bgColor="#0c3a4c" color="#0d1521" size={2} gap={15} />
-            <Controls position="bottom-right" orientation="horizontal" />
-
-            {/* Add node panel */}
+            <Controls
+              position="bottom-center"
+              orientation="horizontal"
+              className="p-2 rounded-md"
+              style={{
+                backgroundColor: "#071026 !important",
+              }}
+            />
             <Panel position="top-left" className="m-4">
               <AddNodeButton nodeTypes={availableNodeTypes} />
             </Panel>
 
-            {/* Debug panel toggle */}
             <Panel position="top-right" className="m-4">
               <button
                 onClick={() => setIsDebugVisible(!isDebugVisible)}
@@ -681,36 +692,79 @@ function PlaybookContent() {
                 {isDebugVisible ? <EyeOff size={18} /> : <Bug size={18} />}
               </button>
             </Panel>
+
+            <Panel
+              position="top-right"
+              className="max-h-[calc(100vh-60px)] overflow-auto"
+            >
+              {selectedNode && (
+                <div className="w-80 bg-[#0b253a] rounded-xl text-white shadow-xl">
+                  <div className="">
+                    <div className="flex justify-between items-center p-4 bg-[#071026] border-b border-[#00F6FF]/10 rounded-t-xl">
+                      <h3 className="text-lg font-bold flex items-center gap-2">
+                        <Settings size={16} />
+                        Node Configuration
+                      </h3>
+                      <button
+                        className="text-gray-400 hover:text-white"
+                        onClick={() => setSelectedNode(null)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div className="p-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+                      <NodeConfiguration
+                        node={selectedNode}
+                        onChange={handleNodeDataChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Panel>
           </ReactFlow>
         </div>
       </div>
 
-      {/* Node configuration sidebar */}
-      {selectedNode && (
-        <div className="absolute right-0 top-0 w-80 h-full bg-[#0b253a] text-white overflow-auto shadow-xl">
-          <div className="flex justify-between items-center p-4 bg-[#071026] border-b border-[#00F6FF]/10">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <Settings size={16} />
-              Node Configuration
-            </h3>
-            <button
-              className="text-gray-400 hover:text-white"
-              onClick={() => setSelectedNode(null)}
-            >
-              ✕
-            </button>
-          </div>
+      {/* {selectedNode && (
+        <div className="relative">
+          <div className="absolute right-0 top-0 w-80 h-full bg-[#0b253a] text-white overflow-auto shadow-xl">
+            <div className="flex justify-between items-center p-4 bg-[#071026] border-b border-[#00F6FF]/10">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <Settings size={16} />
+                Node Configuration
+              </h3>
+              <button
+                className="text-gray-400 hover:text-white"
+                onClick={() => setSelectedNode(null)}
+              >
+                ✕
+              </button>
+            </div>
 
-          <div className="p-4">
-            <NodeConfiguration
-              node={selectedNode}
-              onChange={handleNodeDataChange}
-            />
+            <div className="p-4">
+              <NodeConfiguration
+                node={selectedNode}
+                onChange={handleNodeDataChange}
+              />
+            </div>
           </div>
         </div>
-      )}
+      )} */}
 
-      {/* Debug panel */}
+      {/* <div className="fixed top-0 left-0 m-4">
+        {isEdgePanelOpen && (
+          <EdgePanel
+            isOpen={isEdgePanelOpen}
+            onClose={() => setIsEdgePanelOpen(false)}
+            position={{ x: 0, y: 0 }}
+            edgeData={selectedEdge}
+            onEdgeDataChange={handleEdgeDataChange}
+          />
+        )}
+      </div> */}
+
       <DebugPanel
         logs={logs}
         result={executionResult}

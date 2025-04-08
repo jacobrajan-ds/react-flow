@@ -174,9 +174,9 @@ export default function WorkflowTable({
       collection_id: type === "playbook" ? parentId : "",
       playbook_id: type === "playbookVersion" ? parentId : "",
       execution_mode: "MANUAL",
-      version: "1.0.0", // Default version
-      module_code: "", // Default code
-      playbook: type === "playbookVersion" ? parentId : "", // Set playbook UUID from parentId
+      version: "1.0.0",
+      module_code: "",
+      playbook: type === "playbookVersion" ? parentId : "",
     });
     setIsDialogOpen(true);
   };
@@ -237,7 +237,7 @@ export default function WorkflowTable({
         version: formData.version,
         execution_mode: formData.execution_mode,
         module_code: formData.module_code,
-        playbook: formData.playbook_id, // Using the parent playbook ID
+        playbook: formData.playbook_id,
         is_latest: true,
         is_active: true,
       };
@@ -247,9 +247,7 @@ export default function WorkflowTable({
       const response = await axiosInstance.post(url, payload);
 
       if (response && response.status >= 200 && response.status < 300) {
-        console.log(`${modalType} created successfully:`, response.data);
         handleCloseDialog();
-        // Notify parent component about refresh
         if (onItemClick) {
           onItemClick({ type: "refresh" });
         }
@@ -267,26 +265,16 @@ export default function WorkflowTable({
         event.preventDefault();
         event.stopPropagation();
       }
-
-      console.log(
-        `Toggling row ${id}, current expanded state:`,
-        expandedRows[id]
-      );
-
       setExpandedRows((prev) => {
         const newState = { ...prev };
         newState[id] = !prev[id];
-        console.log(`Set row ${id} expanded to:`, newState[id]);
         return newState;
       });
     },
     [expandedRows]
   );
 
-  // In your processItems function
   const processItems = useCallback((items: any[]): WorkflowItem[] => {
-    console.log("Processing items:", items);
-
     if (!items || !Array.isArray(items)) {
       console.log("Items is not an array or is empty");
       return [];
@@ -298,45 +286,26 @@ export default function WorkflowTable({
           console.log("Invalid item:", item);
           return null;
         }
-
-        // Log the raw item to see its structure
-        console.log("Raw item structure:", JSON.stringify(item, null, 2));
-
-        // Safely check collection and playbook properties
         const itemCollection = item.collection || [];
         const itemPlaybook = item.playbook || [];
 
-        // Check for children directly in the data
         const hasCollections =
           Array.isArray(itemCollection) && itemCollection.length > 0;
         const hasPlaybooks =
           Array.isArray(itemPlaybook) && itemPlaybook.length > 0;
 
-        console.log(
-          `Item ${item.name} (${item.id}) direct children check:`,
-          "collections:",
-          hasCollections ? itemCollection.length : 0,
-          "playbooks:",
-          hasPlaybooks ? itemPlaybook.length : 0
-        );
-
-        // Calculate counts for display
         const collectionCount = hasCollections ? itemCollection.length : 0;
         const playbookCount = hasPlaybooks ? itemPlaybook.length : 0;
 
-        // Explicitly determine if the item has children
         const hasChildren = collectionCount > 0 || playbookCount > 0;
 
-        // Process sub-collections if they exist
         const processedCollections = hasCollections
           ? processItems(itemCollection)
           : [];
 
-        // Process playbooks and their versions
         const processedPlaybooks = [];
         if (hasPlaybooks) {
           for (const playbook of itemPlaybook) {
-            // Create the playbook item
             const playbookItem: WorkflowItem = {
               id: playbook.id,
               name: playbook.name || "Unnamed Playbook",
@@ -351,7 +320,6 @@ export default function WorkflowTable({
               metadata: playbook,
             };
 
-            // Process playbook versions if they exist
             if (
               Array.isArray(playbook.playbook_version) &&
               playbook.playbook_version.length > 0
@@ -377,10 +345,8 @@ export default function WorkflowTable({
           }
         }
 
-        // Combine collections and playbooks as children
         const children = [...processedCollections, ...processedPlaybooks];
 
-        // Create the workflow item
         const workflowItem: WorkflowItem = {
           id: item.id,
           name: item.name || "Unnamed",
@@ -394,16 +360,6 @@ export default function WorkflowTable({
           playbookCount,
           metadata: item,
         };
-
-        console.log(
-          "Created workflow item:",
-          `${workflowItem.name} (${workflowItem.id})`,
-          "hasChildren:",
-          workflowItem.hasChildren,
-          "childCount:",
-          workflowItem.children.length
-        );
-
         return workflowItem;
       })
       .filter(Boolean) as WorkflowItem[];
@@ -416,26 +372,19 @@ export default function WorkflowTable({
       let result: WorkflowItem[] = [];
 
       for (const item of items) {
-        // Create a copy of the item with the current level
         const newItem = {
           ...item,
           level,
           isExpanded: expandedRows[item.id] || false,
         };
 
-        // Add the current item to the result
         result.push(newItem);
 
-        // If expanded, include children
         if (
           expandedRows[item.id] &&
           item.children &&
           item.children.length > 0
         ) {
-          console.log(
-            `Row ${item.id} is expanded, has ${item.children.length} children`
-          );
-
           const childrenWithUpdatedLevel = item.children.map((child) => ({
             ...child,
             level: level + 1,
@@ -454,14 +403,8 @@ export default function WorkflowTable({
     [expandedRows]
   );
 
-  // Convert collections to a proper hierarchical structure before processing
   const prepareDataForProcessing = useCallback((items: any[]): any[] => {
-    console.log("Preparing raw data for processing:", items);
-
     if (items && items.length > 0) {
-      console.log("First item structure:", JSON.stringify(items[0], null, 2));
-
-      // Check if the collection property exists
       if (items[0].collection) {
         console.log(
           "Collection property exists, first collection:",
@@ -474,19 +417,12 @@ export default function WorkflowTable({
       }
     }
 
-    // Deep clone the items to avoid modifying the original
     return JSON.parse(JSON.stringify(items));
   }, []);
 
-  // Process the data for the table - completely independent of parent state now
   const processedData = useMemo(() => {
-    // Prepare the data by establishing proper hierarchy
     const preparedData = prepareDataForProcessing(internalItems);
-
-    // Process the prepared data into our internal format
     const tree = processItems(preparedData);
-
-    // Flatten the tree for table display
     return flattenTree(tree);
   }, [internalItems, processItems, flattenTree, prepareDataForProcessing]);
 
@@ -494,12 +430,8 @@ export default function WorkflowTable({
 
   const columns = useMemo(
     () => [
-      // Name column with toggle functionality
       columnHelper.accessor("name", {
         header: "Name",
-        // In your name column definition:
-        // In your column cell definition:
-        // In your column cell definition:
         cell: (info) => {
           const row = info.row.original;
           const paddingLeft = row.level * 24;
@@ -516,11 +448,9 @@ export default function WorkflowTable({
                 }
               }}
             >
-              {/* Show toggle button for items with children */}
               {shouldShowChevron ? (
                 <div
                   onClick={(e) => {
-                    console.log("Chevron clicked for row:", row.id);
                     e.preventDefault();
                     e.stopPropagation();
                     toggleRowExpanded(row.id, e);
@@ -534,11 +464,9 @@ export default function WorkflowTable({
                   )}
                 </div>
               ) : (
-                // For consistent spacing when no chevron
                 <div className="w-[34px] mr-2"></div>
               )}
 
-              {/* Display appropriate icon and name based on type */}
               <div className="flex items-center gap-2">
                 {row.type === "collection" ? (
                   <div className="flex items-center">
@@ -576,7 +504,6 @@ export default function WorkflowTable({
         },
         size: 350,
       }),
-      // Rest of columns remain the same
       columnHelper.accessor("description", {
         header: "Description",
         cell: (info) => (
@@ -622,7 +549,6 @@ export default function WorkflowTable({
                 {typeText}
               </div>
 
-              {/* Content summary */}
               {type === "collection" &&
                 ((row.collectionCount ?? 0) > 0 ||
                   (row.playbookCount ?? 0) > 0) && (
@@ -695,7 +621,6 @@ export default function WorkflowTable({
                   className="bg-[#1E293B] text-white border border-gray-700 rounded-lg shadow-lg p-2 min-w-[180px]"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Collection actions */}
                   {data.type === "collection" && (
                     <>
                       <DropdownMenuItem
@@ -721,7 +646,6 @@ export default function WorkflowTable({
                     </>
                   )}
 
-                  {/* Playbook actions */}
                   {data.type === "playbook" && (
                     <>
                       <DropdownMenuItem
@@ -748,13 +672,11 @@ export default function WorkflowTable({
                     </>
                   )}
 
-                  {/* Version actions */}
                   {data.type === "playbookVersion" && (
                     <>
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();
-                          // Handle execution
                           if (onItemClick)
                             onItemClick({ ...data, action: "run" });
                         }}
@@ -786,7 +708,7 @@ export default function WorkflowTable({
   const [rowSelection, setRowSelection] = useState({});
 
   const table = useReactTable({
-    data: processedData, // Use the flattened data
+    data: processedData,
     columns,
     state: {
       rowSelection,
@@ -795,10 +717,6 @@ export default function WorkflowTable({
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
   });
-  useEffect(() => {
-    console.log("Processed data for table:", processedData);
-    console.log("Expanded rows:", expandedRows);
-  }, [processedData, expandedRows]);
 
   if (isLoading) {
     return (
@@ -818,10 +736,8 @@ export default function WorkflowTable({
 
   return (
     <div className="bg-gradient-to-b from-[#0A162E] to-[#131B2F] rounded-xl shadow-lg border border-[#00F6FF]/10 overflow-hidden">
-      {/* Dialog for creating new items */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px] bg-[#1E293B] border border-gray-700">
-          {/* Dialog Content - same as before */}
           <DialogHeader>
             <DialogTitle className="text-white">
               {modalType === "collection" && "New Collection"}
@@ -839,7 +755,6 @@ export default function WorkflowTable({
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            {/* Dialog form fields */}
             {(modalType === "collection" || modalType === "playbook") && (
               <>
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -998,7 +913,6 @@ export default function WorkflowTable({
         </DialogContent>
       </Dialog>
 
-      {/* Main table */}
       <div>
         <div className="overflow-x-auto">
           <table className="w-full">

@@ -35,7 +35,7 @@ export default function RootLayout({
           <div className="page-wrapper flex w-full">
             {/* <Sidebar /> */}
             <div className="body-wrapper flex flex-col w-full bg-primary">
-              <Header layoutType="vertical" />
+              {/* <Header layoutType="vertical" /> */}
               {/* <NavBar /> */}
               <main className="flex-1 overflow-hidden">
                 <div className="h-full">

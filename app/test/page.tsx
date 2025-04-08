@@ -32,11 +32,9 @@ import { FaBug, FaEyeSlash } from "react-icons/fa";
 import Sidebar from "@/components/SideBar/SideBar";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 
-// Main Flow Editor component
 function FlowEditor() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // Memoize the sidebar to prevent re-renders
   const sidebar = useMemo(
     () => (
       <Sidebar
@@ -59,7 +57,6 @@ function FlowEditor() {
   );
 }
 
-// Separate component for the flow content
 function FlowContent({ isSidebarOpen }) {
   const [nodes, setNodes] = useState<CustomNode[]>([]);
   const [edges, setEdges] = useState<CustomEdge[]>([]);
@@ -112,7 +109,6 @@ function FlowContent({ isSidebarOpen }) {
         if (response.ok) {
           const data = await response.json();
           setFlowId(id);
-          // Use a small timeout to prevent flashing
           setTimeout(() => {
             setNodes(data.nodes || []);
             setEdges(data.edges || []);
@@ -120,7 +116,6 @@ function FlowContent({ isSidebarOpen }) {
             setIsLoading(false);
           }, 100);
         } else if (response.status === 404) {
-          // Workflow doesn't exist yet, initialize it
           console.log(`Workflow ${id} not found, initializing new workflow`);
           setFlowId(id);
           setNodes([]);
@@ -202,7 +197,6 @@ function FlowContent({ isSidebarOpen }) {
       const nodeType = event.dataTransfer.getData("application/reactflow");
       if (!nodeType) return;
 
-      // Get the current pane position
       const reactFlowBounds = document
         .querySelector(".react-flow")
         ?.getBoundingClientRect();

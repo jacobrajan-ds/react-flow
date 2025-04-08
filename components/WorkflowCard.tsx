@@ -36,7 +36,6 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
     );
   }
 
-  // Determine the icon based on item type
   let icon;
   let bgColor = "bg-gradient-to-br";
   let gradientColors = "";
@@ -52,13 +51,11 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
     gradientColors = "from-emerald-400 to-teal-500";
   }
 
-  // Count items within each type
   const collectionCount = workflow?.collection?.length || 0;
   const playbookCount = workflow?.playbook?.length || 0;
   const versionCount = workflow?.playbook_version?.length || 0;
   const totalItemCount = collectionCount + playbookCount;
 
-  // Format date for display: 2025-04-04 to Apr 4, 2025
   const formattedDate = workflow?.created_at
     ? new Date(workflow.created_at).toLocaleDateString("en-US", {
         month: "short",
@@ -69,7 +66,6 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
 
   return (
     <div className="bg-[#071026] border border-[#00F6FF]/30 hover:border-[#00F6FF] rounded-xl p-5 w-[280px] h-[180px] flex flex-col cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-[#00F6FF]/20 group relative overflow-hidden">
-      {/* Subtle glow effect on hover */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#00F6FF]/0 to-[#00F6FF]/0 group-hover:from-[#00F6FF]/5 group-hover:to-[#00F6FF]/10 transition-all duration-500"></div>
 
       <div className="flex justify-between items-center mb-3">
@@ -104,7 +100,6 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
         {workflow?.description || "No description provided"}
       </p>
 
-      {/* Status badges for playbook versions */}
       {workflow?.type === "playbookVersion" &&
         workflow?.version_info?.is_latest && (
           // <div className="absolute top-3 right-3 bg-[#00F6FF] text-[#071026] text-xs px-2 py-0.5 rounded-full font-medium">
@@ -113,9 +108,7 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
           <></>
         )}
 
-      {/* Content summary footer - replacing calendar and user info */}
       <div className="flex justify-between items-center mt-4 text-xs pt-2 border-t border-gray-800">
-        {/* For collections: show breakdown of contained items */}
         {workflow?.type === "collection" && (
           <>
             {collectionCount > 0 && (
@@ -143,7 +136,6 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
           </>
         )}
 
-        {/* For playbooks: show version info */}
         {workflow?.type === "playbook" && (
           <>
             {versionCount > 0 ? (
@@ -159,7 +151,6 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
                 <span>No versions</span>
               </div>
             )}
-            {/* Show execution mode if available */}
             {workflow.playbook_version &&
               workflow.playbook_version[0]?.execution_mode && (
                 <div className="flex items-center text-gray-400">
@@ -172,7 +163,6 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
           </>
         )}
 
-        {/* For playbook versions: show version number and mode */}
         {workflow?.type === "playbookVersion" && workflow?.version_info && (
           <>
             <div className="flex items-center text-teal-400">
@@ -187,12 +177,10 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
         )}
       </div>
 
-      {/* Show contents preview for collections */}
       {workflow?.type === "collection" &&
         (collectionCount > 0 || playbookCount > 0) && (
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#071026] to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs pt-10">
             <div className="flex flex-wrap gap-1">
-              {/* Collection items previews */}
               {workflow.collection &&
                 workflow.collection
                   .slice(0, 2)
@@ -208,7 +196,6 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
                     </div>
                   ))}
 
-              {/* Playbook items previews */}
               {workflow.playbook &&
                 workflow.playbook.slice(0, 2).map((pb: any, index: number) => (
                   <div
@@ -222,7 +209,6 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
                   </div>
                 ))}
 
-              {/* Show count of additional items if there are more */}
               {totalItemCount > 4 && (
                 <div className="bg-[#0A162E] px-2 py-1 rounded">
                   <span className="text-gray-400">
@@ -234,7 +220,6 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
           </div>
         )}
 
-      {/* Show version info for playbooks */}
       {workflow?.type === "playbook" && versionCount > 0 && (
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#071026] to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs pt-10">
           <div className="flex flex-wrap gap-1">

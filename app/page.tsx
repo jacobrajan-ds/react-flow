@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import axiosInstance from "@/utils/axios";
 
-// Types and interfaces remain the same as in your original code...
 interface PlaybookVersion {
   id: string;
   version_number: number;
@@ -80,7 +79,6 @@ export default function WorkflowPage() {
   const [openModal, setOpenModal] = useState(false);
   const router = useRouter();
 
-  // Separate state for Card View
   const [cardItems, setCardItems] = useState<DisplayItem[]>([]);
   const [currentCollection, setCurrentCollection] = useState<string | null>(
     null
@@ -88,7 +86,6 @@ export default function WorkflowPage() {
   const [currentPlaybook, setCurrentPlaybook] = useState<string | null>(null);
   const [breadcrumbItems, setBreadcrumbItems] = useState<BreadcrumbItem[]>([]);
 
-  // Separate state for Table View
   const [tableItems, setTableItems] = useState<DisplayItem[]>([]);
   const [tableRefreshTrigger, setTableRefreshTrigger] = useState(0);
 
@@ -117,10 +114,8 @@ export default function WorkflowPage() {
 
       setAllWorkflows(workflowList);
 
-      // Get root-level collections
       const rootCollections = workflowList.filter((w) => w.parent_id === null);
 
-      // Set initial state for both card and table views
       const rootDisplayItems: DisplayItem[] = rootCollections.map(
         (collection) => ({
           id: collection.id,
@@ -144,13 +139,11 @@ export default function WorkflowPage() {
     const searchValue = e.target.value.toLowerCase();
 
     if (searchValue === "") {
-      // Reset to current level for card view
       if (currentPlaybook) {
         navigateToPlaybook(currentPlaybook);
       } else if (currentCollection) {
         navigateToCollection(currentCollection);
       } else {
-        // Reset to root collections
         const rootCollections = allWorkflows.filter(
           (w) => w.parent_id === null
         );
@@ -168,8 +161,6 @@ export default function WorkflowPage() {
         setCardItems(rootDisplayItems);
       }
 
-      // Reset table view to show root collections for simplicity
-      // You could maintain separate navigation state for table if needed
       const rootTableItems = allWorkflows
         .filter((w) => w.parent_id === null)
         .map((collection) => ({
@@ -182,12 +173,9 @@ export default function WorkflowPage() {
 
       setTableItems(rootTableItems);
     } else {
-      // Search in all workflows, playbooks, and versions
       const searchResults: DisplayItem[] = [];
 
-      // Search function for traversing the hierarchy
       const searchInHierarchy = (collection: Collection) => {
-        // Check if collection matches
         if (
           collection.name.toLowerCase().includes(searchValue) ||
           collection.description.toLowerCase().includes(searchValue)
@@ -201,7 +189,6 @@ export default function WorkflowPage() {
           });
         }
 
-        // Search in playbooks
         if (collection.playbook) {
           collection.playbook.forEach((playbook) => {
             if (
@@ -218,7 +205,6 @@ export default function WorkflowPage() {
               });
             }
 
-            // Search in playbook versions
             if (playbook.playbook_version) {
               playbook.playbook_version.forEach((version) => {
                 if (
@@ -239,24 +225,19 @@ export default function WorkflowPage() {
           });
         }
 
-        // Search in nested collections
         if (collection.collection) {
           collection.collection.forEach(searchInHierarchy);
         }
       };
 
-      // Start search from root collections
       allWorkflows.forEach(searchInHierarchy);
 
-      // Update both views with search results
       setCardItems(searchResults);
       setTableItems(searchResults);
     }
   };
 
-  // Card-specific navigation functions
   const navigateToPlaybook = (playbookId: string) => {
-    // Find the playbook
     let foundPlaybook: Playbook | undefined;
     let parentCollection: Collection | undefined;
 
@@ -284,21 +265,17 @@ export default function WorkflowPage() {
 
     if (!foundPlaybook || !parentCollection) return;
 
-    // Set current navigation state
     setCurrentPlaybook(playbookId);
     setCurrentCollection(parentCollection.id);
 
-    // Update breadcrumb
     const breadcrumbPath: BreadcrumbItem[] = [];
 
-    // Add the playbook to breadcrumb
     breadcrumbPath.push({
       id: foundPlaybook.id,
       name: foundPlaybook.name,
       type: "playbook",
     });
 
-    // Add parent collection to breadcrumb path
     let currentItem: Collection | undefined = parentCollection;
     while (currentItem) {
       breadcrumbPath.unshift({
@@ -312,7 +289,6 @@ export default function WorkflowPage() {
 
     setBreadcrumbItems(breadcrumbPath);
 
-    // Show playbook versions as display items
     const versions: DisplayItem[] = foundPlaybook.playbook_version.map(
       (version) => ({
         id: version.id,
@@ -328,11 +304,9 @@ export default function WorkflowPage() {
   };
 
   const navigateToCollection = (collectionId: string | null) => {
-    // Reset playbook navigation
     setCurrentPlaybook(null);
 
     if (collectionId === null) {
-      // Navigate to root
       const rootCollections = allWorkflows.filter((w) => w.parent_id === null);
 
       const rootDisplayItems: DisplayItem[] = rootCollections.map(
@@ -351,18 +325,14 @@ export default function WorkflowPage() {
       return;
     }
 
-    // Find the collection
     const collection = findCollectionById(allWorkflows, collectionId);
     if (!collection) return;
 
-    // Set current collection
     setCurrentCollection(collectionId);
 
-    // Update breadcrumb
     const breadcrumbPath: BreadcrumbItem[] = [];
     let currentItem: Collection | undefined = collection;
 
-    // Build the breadcrumb path
     while (currentItem) {
       breadcrumbPath.unshift({
         id: currentItem.id,
@@ -375,10 +345,8 @@ export default function WorkflowPage() {
 
     setBreadcrumbItems(breadcrumbPath);
 
-    // Create a display list with child collections and playbooks
     const displayItems: DisplayItem[] = [];
 
-    // Add child collections
     if (collection.collection && collection.collection.length > 0) {
       collection.collection.forEach((childCollection) => {
         displayItems.push({
@@ -391,7 +359,6 @@ export default function WorkflowPage() {
       });
     }
 
-    // Add playbooks
     if (collection.playbook && collection.playbook.length > 0) {
       collection.playbook.forEach((playbook) => {
         displayItems.push({
@@ -413,15 +380,12 @@ export default function WorkflowPage() {
     parentId: string
   ) => {
     console.log(`Open dialog for ${type} under parent ID: ${parentId}`);
-    // Implement dialog opening logic here
   };
 
   const handleItemClick = (item: any) => {
     console.log("View playbook:", item);
-    // Implement navigation or other logic here
   };
 
-  // Utility functions for finding collections and playbooks
   const findCollectionById = (
     collections: Collection[],
     id: string
@@ -444,46 +408,35 @@ export default function WorkflowPage() {
     index: number
   ) => {
     if (item === null) {
-      // Navigate to root
       navigateToCollection(null);
     } else if (item.type === "collection") {
-      // Navigate to specific collection
       navigateToCollection(item.id);
 
-      // Truncate breadcrumb to this level
       setBreadcrumbItems(breadcrumbItems.slice(0, index + 1));
     } else if (item.type === "playbook") {
-      // Navigate to specific playbook
       navigateToPlaybook(item.id);
 
-      // Truncate breadcrumb to this level
       setBreadcrumbItems(breadcrumbItems.slice(0, index + 1));
     }
   };
 
   const handleCardClick = (item: DisplayItem) => {
     if (item.type === "collection") {
-      // Navigate to collection
       navigateToCollection(item.id);
     } else if (item.type === "playbook") {
-      // Navigate to playbook to show its versions
       navigateToPlaybook(item.id);
     } else if (item.type === "playbookVersion") {
-      // Navigate to playbook version - redirect to a different page
       router.push(`/playbook/${item.parent_id}`);
     }
   };
 
-  // Handle table interactions separately
   const handleTableItemClick = (item: any) => {
     if (item?.type === "refresh") {
-      // Refresh the table by triggering the useEffect
       setTableRefreshTrigger((prev) => prev + 1);
       fetchWorkflows();
       return;
     }
 
-    // Handle navigation in table view
     if (item?.type === "playbookVersion") {
       router.push(`/playbook/${item.parent_id}`);
     }
@@ -497,10 +450,8 @@ export default function WorkflowPage() {
   console.log(tableItems);
 
   return (
-    <div className="flex h-screen bg-[#131B2F] text-white">
-      {/* <Sidebar /> */}
-
-      <div className="flex-1 overflow-auto">
+    <div className="flex h-full bg-[#131B2F] text-white">
+      <div className="flex-1 overflow-y-auto">
         <div className="max-w-screen-xl mx-auto p-9">
           <div>
             <h1 className="text-[24px] font-bold text-white">Collections</h1>
@@ -509,7 +460,6 @@ export default function WorkflowPage() {
           <div className="py-2"></div>
 
           <div className="w-full py-5 flex justify-between items-center bg-[#071026]/60 rounded-xl px-6 shadow-lg shadow-[#00F6FF]/5 border border-[#00F6FF]/10 mb-8">
-            {/* Left side: View toggles with modern design */}
             <div className="flex items-center gap-6">
               <div className="relative bg-[#0A162E] rounded-lg p-1 shadow-inner shadow-black/20 w-52">
                 <div
@@ -546,9 +496,7 @@ export default function WorkflowPage() {
               </div>
             </div>
 
-            {/* Right side: Search and controls */}
             <div className="flex items-center gap-4">
-              {/* Modern search input */}
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Search className="text-gray-400" size={16} />
@@ -561,10 +509,8 @@ export default function WorkflowPage() {
                 />
               </div>
 
-              {/* Divider */}
               <div className="h-8 w-px bg-gradient-to-b from-[#00F6FF]/20 via-[#00F6FF]/40 to-[#00F6FF]/20"></div>
 
-              {/* Action buttons */}
               <div className="flex gap-2 items-center">
                 <div className="flex bg-[#0A162E] rounded-lg p-1 border border-gray-800">
                   <button className="p-2 rounded-lg text-gray-400 hover:text-[#00F6FF] hover:bg-[#071026] transition-colors">
@@ -578,7 +524,6 @@ export default function WorkflowPage() {
                   </button>
                 </div>
 
-                {/* Add button with animated hover effect */}
                 <button
                   onClick={() => setOpenModal(true)}
                   className="bg-gradient-to-r from-[#00F6FF] to-[#61DDFF] p-[1px] rounded-full group hover:shadow-lg hover:shadow-[#00F6FF]/20 transition-all duration-300"
@@ -594,7 +539,6 @@ export default function WorkflowPage() {
             </div>
           </div>
 
-          {/* Workflow content */}
           <div className="mt-8">
             <WorkflowForm
               openModal={openModal}
@@ -604,7 +548,6 @@ export default function WorkflowPage() {
 
             {currentView === "board" ? (
               <>
-                {/* Breadcrumb Navigation - Only shown in Board View */}
                 {breadcrumbItems.length >= 0 && (
                   <div className="mb-5 p-3 rounded-md">
                     <div className="flex items-center space-x-1 text-sm">
